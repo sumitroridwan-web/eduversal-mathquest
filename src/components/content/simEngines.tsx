@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { RotateCcw, Lightbulb, Play, Check, X, Settings2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { RotateCcw, Lightbulb, Play, Check, X, Settings2, Maximize2, Minimize2, ZoomIn, ZoomOut } from "lucide-react";
 import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -28,7 +28,71 @@ function Fruit({ tone = "teal", px = 26 }: { tone?: "teal" | "accent" | "red"; p
 // simulations behave the same. Every engine has an Options panel.
 // ==========================================================
 
+// Presentation stage — a full-screen "Present" mode for teaching, with zoom.
+function SimStage({ title, children }: { title: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [nativeFS, setNativeFS] = useState(false);
+  const [overlay, setOverlay] = useState(false);
+  const [zoom, setZoom] = useState(1.4);
+  const presenting = nativeFS || overlay;
+
+  useEffect(() => {
+    const onChange = () => setNativeFS(document.fullscreenElement === ref.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  useEffect(() => {
+    if (!overlay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOverlay(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [overlay]);
+
+  const present = async () => {
+    const el = ref.current;
+    if (el?.requestFullscreen) {
+      try { await el.requestFullscreen(); return; } catch { /* fall back to overlay */ }
+    }
+    setOverlay(true);
+  };
+  const exit = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); setOverlay(false); };
+  const bump = (d: number) => setZoom((z) => clamp(Number((z + d).toFixed(2)), 0.8, 3));
+
+  return (
+    <div ref={ref} className={cn(overlay ? "fixed inset-0 z-[80] flex flex-col bg-surface-soft" : nativeFS ? "flex h-full w-full flex-col bg-surface-soft" : "relative")}>
+      {presenting && (
+        <header className="flex items-center justify-between gap-3 border-b border-navy-100 bg-white px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Badge tone="teal">Presenting</Badge>
+            <p className="truncate font-display font-semibold text-navy-900">{title}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => bump(-0.2)} aria-label="Zoom out"><ZoomOut className="h-4 w-4" /></Button>
+            <span className="w-12 text-center text-sm font-semibold text-navy-600 tabular-nums">{Math.round(zoom * 100)}%</span>
+            <Button variant="outline" size="sm" onClick={() => bump(0.2)} aria-label="Zoom in"><ZoomIn className="h-4 w-4" /></Button>
+            <Button variant="primary" size="sm" onClick={exit}><Minimize2 className="h-4 w-4" /> Exit</Button>
+          </div>
+        </header>
+      )}
+      <div className={cn(presenting && "flex flex-1 justify-center overflow-auto p-6")}>
+        <div style={presenting ? { transform: `scale(${zoom})`, transformOrigin: "top center", width: 620, maxWidth: "100%" } : undefined}>
+          {children}
+        </div>
+      </div>
+      {!presenting && (
+        <div className="mt-3 flex justify-end">
+          <Button variant="outline" size="sm" onClick={present}><Maximize2 className="h-4 w-4" /> Present full screen</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SimulationEngine({ resource }: { resource: Resource }) {
+  return <SimStage title={resource.title}><SimEngineInner resource={resource} /></SimStage>;
+}
+
+function SimEngineInner({ resource }: { resource: Resource }) {
   const id = resource.id;
   const cover = resource.cover;
 
@@ -253,9 +317,14 @@ function NumberLineMain({ resource }: { resource: Resource }) {
   const [min, max] = NL_RANGES[rangeKey];
   const [value, setValue] = useState(mode === "onemore" ? 4 : 0);
   const [step, setStep] = useState(p.nlStep ?? 2);
+  const [drag, setDrag] = useState(false);
   useEffect(() => { setValue((v) => clamp(v, min, max)); }, [min, max]);
   const W = 320, pad = 16, span = max - min;
   const toX = (v: number) => pad + ((v - min) / span) * (W - 2 * pad);
+  const setFrom = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setValue(clamp(Math.round(min + ((e.clientX - r.left) / r.width) * span), min, max));
+  };
 
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setValue(clamp(mode === "onemore" ? 4 : 0, min, max))}
@@ -266,8 +335,11 @@ function NumberLineMain({ resource }: { resource: Resource }) {
     >
       <Intro>{p.intro ?? "Tap the line or jump in steps."}</Intro>
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${W} 90`} className="mx-auto block w-full min-w-[300px]"
-          onClick={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); setValue(clamp(Math.round(min + ((e.clientX - r.left) / r.width) * span), min, max)); }}>
+        <svg viewBox={`0 0 ${W} 90`} className="mx-auto block w-full min-w-[300px] cursor-grab touch-none active:cursor-grabbing"
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); setFrom(e); }}
+          onPointerMove={(e) => { if (drag) setFrom(e); }}
+          onPointerUp={() => setDrag(false)}
+          onPointerCancel={() => setDrag(false)}>
           <line x1={pad} y1={54} x2={W - pad} y2={54} stroke="#31415f" strokeWidth={2.5} strokeLinecap="round" />
           {Array.from({ length: span + 1 }, (_, i) => min + i).map((v) => {
             const label = showLabels ? (span <= 20 || v % 10 === 0) : v % 10 === 0;
@@ -566,10 +638,27 @@ function ClockEngine({ resource }: { resource: Resource }) {
   const [showWords, setShowWords] = useState(true);
   const [hour, setHour] = useState(3);
   const [min, setMin] = useState(0);
+  const [drag, setDrag] = useState(false);
+  const lastMin = useRef(0);
   useEffect(() => { setMin((m) => (Math.round(m / precision) * precision) % 60); }, [precision]);
+  useEffect(() => { lastMin.current = min; }, [min]);
   const cx = 90, cy = 90, r = 78;
   const minAngle = (min * 6 - 90) * (Math.PI / 180);
   const hourAngle = (((hour % 12) * 30 + min * 0.5) - 90) * (Math.PI / 180);
+  const setFromPointer = (e: React.PointerEvent<SVGSVGElement>) => {
+    const rct = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rct.left) / rct.width) * 180 - cx;
+    const y = ((e.clientY - rct.top) / rct.height) * 180 - cy;
+    let deg = (Math.atan2(y, x) * 180) / Math.PI + 90;
+    if (deg < 0) deg += 360;
+    let m = Math.round(deg / 6) % 60;
+    m = (Math.round(m / precision) * precision) % 60;
+    const prev = lastMin.current;
+    if (prev >= 45 && m <= 15) setHour((h) => (h % 12) + 1);
+    else if (prev <= 15 && m >= 45) setHour((h) => ((h - 2 + 12) % 12) + 1);
+    lastMin.current = m;
+    setMin(m);
+  };
   const words = (() => {
     const names = ["twelve", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven"];
     const h12 = hour % 12;
@@ -587,9 +676,13 @@ function ClockEngine({ resource }: { resource: Resource }) {
         <SettingRow label="Read time in words"><Toggle checked={showWords} onChange={setShowWords} /></SettingRow>
       </>}
     >
-      <Intro>{p.intro ?? "Move the hands and read the time."}</Intro>
+      <Intro>{p.intro ?? "Drag the hands to set the time, then read it."}</Intro>
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-around">
-        <svg viewBox="0 0 180 180" className="h-44 w-44">
+        <svg viewBox="0 0 180 180" className="h-44 w-44 cursor-grab touch-none active:cursor-grabbing"
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); setFromPointer(e); }}
+          onPointerMove={(e) => { if (drag) setFromPointer(e); }}
+          onPointerUp={() => setDrag(false)}
+          onPointerCancel={() => setDrag(false)}>
           <circle cx={cx} cy={cy} r={r} fill="#fff" stroke="#31415f" strokeWidth={3} />
           {Array.from({ length: 12 }).map((_, i) => { const a = (i * 30 - 90) * (Math.PI / 180); return <text key={i} x={cx + (r - 14) * Math.cos(a)} y={cy + (r - 14) * Math.sin(a) + 4} fontSize={12} textAnchor="middle" fill="#6a80a9" fontWeight={700}>{i === 0 ? 12 : i}</text>; })}
           <line x1={cx} y1={cy} x2={cx + (r - 34) * Math.cos(hourAngle)} y2={cy + (r - 34) * Math.sin(hourAngle)} stroke="#1b2540" strokeWidth={5} strokeLinecap="round" />
@@ -618,11 +711,18 @@ function CoordinateEngine({ resource }: { resource: Resource }) {
   const [gridMax, setGridMax] = useState(p.coGrid ?? 6);
   const [connect, setConnect] = useState(true);
   const [pts, setPts] = useState<[number, number][]>([]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
   useEffect(() => { setPts([]); }, [quad, gridMax]);
   const lo = quad === 4 ? -gridMax : 0, hi = gridMax;
   const size = 260, pad = 24, span = hi - lo;
   const toX = (x: number) => pad + ((x - lo) / span) * (size - 2 * pad);
   const toY = (y: number) => size - pad - ((y - lo) / span) * (size - 2 * pad);
+  const toGrid = (e: React.PointerEvent<SVGSVGElement>): [number, number] => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const gx = Math.round(lo + (((e.clientX - r.left) / r.width) * size - pad) / (size - 2 * pad) * span);
+    const gy = Math.round(lo + (size - pad - ((e.clientY - r.top) / r.height) * size) / (size - 2 * pad) * span);
+    return [clamp(gx, lo, hi), clamp(gy, lo, hi)];
+  };
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setPts([])}
       settings={<>
@@ -631,10 +731,19 @@ function CoordinateEngine({ resource }: { resource: Resource }) {
         <SettingRow label="Connect points"><Toggle checked={connect} onChange={setConnect} /></SettingRow>
       </>}
     >
-      <Intro>{p.intro ?? `Tap the grid to plot points ${quad === 4 ? "in any quadrant" : "in the first quadrant"}.`}</Intro>
+      <Intro>{p.intro ?? `Tap to plot points, or drag a point to move it${quad === 4 ? "" : " (first quadrant)"}.`}</Intro>
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-around">
-        <svg viewBox={`0 0 ${size} ${size}`} className="h-64 w-64 rounded-xl bg-surface-soft"
-          onClick={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); const gx = Math.round(lo + (((e.clientX - r.left) / r.width) * size - pad) / (size - 2 * pad) * span); const gy = Math.round(lo + (size - pad - ((e.clientY - r.top) / r.height) * size) / (size - 2 * pad) * span); if (gx >= lo && gx <= hi && gy >= lo && gy <= hi) setPts((pp) => [...pp, [gx, gy]]); }}>
+        <svg viewBox={`0 0 ${size} ${size}`} className="h-64 w-64 touch-none rounded-xl bg-surface-soft"
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            const [gx, gy] = toGrid(e);
+            const hit = pts.findIndex(([x, y]) => x === gx && y === gy);
+            if (hit >= 0) setDragIdx(hit);
+            else { setPts((pp) => [...pp, [gx, gy]]); setDragIdx(pts.length); }
+          }}
+          onPointerMove={(e) => { if (dragIdx === null) return; const g = toGrid(e); setPts((pp) => pp.map((pt, i) => (i === dragIdx ? g : pt))); }}
+          onPointerUp={() => setDragIdx(null)}
+          onPointerCancel={() => setDragIdx(null)}>
           {Array.from({ length: span + 1 }, (_, i) => lo + i).map((v) => <g key={v} stroke="#dfe4ee" strokeWidth={1}><line x1={toX(v)} y1={toY(lo)} x2={toX(v)} y2={toY(hi)} /><line x1={toX(lo)} y1={toY(v)} x2={toX(hi)} y2={toY(v)} /></g>)}
           <line x1={toX(lo)} y1={toY(0)} x2={toX(hi)} y2={toY(0)} stroke="#98a8c6" strokeWidth={2} />
           <line x1={toX(0)} y1={toY(lo)} x2={toX(0)} y2={toY(hi)} stroke="#98a8c6" strokeWidth={2} />
@@ -726,6 +835,11 @@ function SpinnerEngine({ resource }: { resource: Resource }) {
     setRot((r) => r + 360 * 4 + (360 - (idx * (360 / sectors) + 360 / sectors / 2)));
     window.setTimeout(() => { setCounts((c) => c.map((x, i) => (i === idx ? x + 1 : x))); setSpinning(false); }, 1600);
   };
+  const spinMany = (n: number) => {
+    const add = Array(sectors).fill(0);
+    for (let k = 0; k < n; k++) add[Math.floor(Math.random() * sectors)] += 1;
+    setCounts((c) => c.map((x, i) => x + add[i]));
+  };
   const cx = 90, cy = 90, r = 80;
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setCounts(Array(sectors).fill(0))}
@@ -741,10 +855,21 @@ function SpinnerEngine({ resource }: { resource: Resource }) {
           <div className="absolute left-1/2 top-0 -translate-x-1/2" style={{ width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "14px solid #1b2540" }} />
         </div>
         <div className="text-center">
-          <Button onClick={spin} loading={spinning}><Play className="h-4 w-4" /> Spin</Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={spin} loading={spinning}><Play className="h-4 w-4" /> Spin</Button>
+            <Button variant="outline" size="sm" onClick={() => spinMany(10)}>×10</Button>
+            <Button variant="outline" size="sm" onClick={() => spinMany(100)}>×100</Button>
+          </div>
           <div className="mt-4 space-y-1.5">
-            {SPIN_COLORS.slice(0, sectors).map((c, i) => <div key={i} className="flex items-center gap-2 text-sm"><span className="h-3 w-3 rounded-full" style={{ background: c.hex }} /><span className="w-14 text-navy-600">{counts[i]}</span><span className="text-xs text-navy-400">{total ? `${Math.round((counts[i] / total) * 100)}%` : "—"}</span></div>)}
-            <p className="pt-1 text-xs text-navy-400">Total spins: {total} · P(each) = 1/{sectors}</p>
+            {SPIN_COLORS.slice(0, sectors).map((c, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="h-3 w-3 rounded-full" style={{ background: c.hex }} />
+                <span className="w-10 text-right text-navy-600 tabular-nums">{counts[i]}</span>
+                <span className="h-2 w-24 overflow-hidden rounded-full bg-navy-100"><span className="block h-full rounded-full" style={{ width: total ? `${(counts[i] / total) * 100}%` : "0%", background: c.hex }} /></span>
+                <span className="w-10 text-xs text-navy-400 tabular-nums">{total ? `${Math.round((counts[i] / total) * 100)}%` : "—"}</span>
+              </div>
+            ))}
+            <p className="pt-1 text-xs text-navy-400">Total spins: {total} · P(each) = 1/{sectors}. More trials → closer to expected.</p>
           </div>
         </div>
       </div>
@@ -824,10 +949,20 @@ function AnglesEngine({ resource }: { resource: Resource }) {
   const [quiz, setQuiz] = useState(false);
   const [a, setA] = useState(120);
   const [reveal, setReveal] = useState(false);
+  const [drag, setDrag] = useState(false);
   const other = 180 - a;
   const cx = 150, cy = 120, len = 110;
   const rad = (a * Math.PI) / 180;
-  const ax = cx + len * Math.cos(Math.PI - rad), ay = cy - len * Math.sin(Math.PI - rad);
+  const ax = cx + len * Math.cos(rad), ay = cy - len * Math.sin(rad);
+  const setFromPointer = (e: React.PointerEvent<SVGSVGElement>) => {
+    const rct = e.currentTarget.getBoundingClientRect();
+    const vx = ((e.clientX - rct.left) / rct.width) * 300;
+    const vy = ((e.clientY - rct.top) / rct.height) * 150;
+    let deg = (Math.atan2(cy - vy, vx - cx) * 180) / Math.PI;
+    if (deg < 0) deg = 0;
+    setA(clamp(Math.round(deg / snap) * snap, 10, 170));
+    setReveal(false);
+  };
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => { setA(120); setReveal(false); }}
       settings={<>
@@ -835,13 +970,18 @@ function AnglesEngine({ resource }: { resource: Resource }) {
         <SettingRow label="Quiz mode (hide answer)"><Toggle checked={quiz} onChange={(v) => { setQuiz(v); setReveal(false); }} /></SettingRow>
       </>}
     >
-      <Intro>{simPreset(resource.id).intro ?? "Drag the slider. The two angles on the straight line total 180°."}</Intro>
-      <svg viewBox="0 0 300 150" className="mx-auto block w-full max-w-sm">
+      <Intro>{simPreset(resource.id).intro ?? "Drag the orange ray (or use the slider). The two angles on the line total 180°."}</Intro>
+      <svg viewBox="0 0 300 150" className="mx-auto block w-full max-w-sm cursor-grab touch-none active:cursor-grabbing"
+        onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); setFromPointer(e); }}
+        onPointerMove={(e) => { if (drag) setFromPointer(e); }}
+        onPointerUp={() => setDrag(false)}
+        onPointerCancel={() => setDrag(false)}>
         <line x1={cx - len} y1={cy} x2={cx + len} y2={cy} stroke="#31415f" strokeWidth={3} strokeLinecap="round" />
-        <line x1={cx} y1={cy} x2={ax} y2={ay} stroke="#f59e0b" strokeWidth={3} strokeLinecap="round" />
-        <path d={`M${cx + 28} ${cy} A28 28 0 0 0 ${cx + 28 * Math.cos(rad)} ${cy - 28 * Math.sin(rad)}`} fill="none" stroke="#199473" strokeWidth={2} />
-        <text x={cx + 40} y={cy - 14} fontSize={13} fill="#199473" fontWeight={800}>{a}°</text>
-        <text x={cx - 60} y={cy - 14} fontSize={13} fill="#6a80a9" fontWeight={800}>{quiz && !reveal ? "?" : `${other}°`}</text>
+        <path d={`M${cx + 30} ${cy} A30 30 0 0 0 ${cx + 30 * Math.cos(rad)} ${cy - 30 * Math.sin(rad)}`} fill="#199473" fillOpacity={0.15} stroke="#199473" strokeWidth={2} />
+        <line x1={cx} y1={cy} x2={ax} y2={ay} stroke="#f59e0b" strokeWidth={3.5} strokeLinecap="round" />
+        <circle cx={ax} cy={ay} r={7} fill="#f59e0b" stroke="#fff" strokeWidth={2} />
+        <text x={cx + 12} y={cy - 20} fontSize={13} fill="#199473" fontWeight={800}>{a}°</text>
+        <text x={cx - 40} y={cy - 20} fontSize={13} fill="#6a80a9" fontWeight={800}>{quiz && !reveal ? "?" : `${other}°`}</text>
         <circle cx={cx} cy={cy} r={4} fill="#1b2540" />
       </svg>
       <input type="range" min={10} max={170} step={snap} value={a} onChange={(e) => { setA(Number(e.target.value)); setReveal(false); }} className="mt-3 w-full accent-teal-600" aria-label="angle" />
