@@ -9,6 +9,7 @@ export default function TeacherLibrary() {
       resources={resources}
       basePath="/teacher"
       role="teacher"
+      defaultSort="stage"
     />
   );
 }

@@ -9,6 +9,7 @@ import { SearchField, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
 import { distinct } from "@/lib/content";
+import { gradeRank } from "@/lib/cra";
 
 interface ContentLibraryProps {
   resources: Resource[];
@@ -17,11 +18,13 @@ interface ContentLibraryProps {
   locked?: boolean;
   /** Restrict the type filter to a single content type (for Games/Sims/Books pages) */
   lockType?: ContentType;
+  /** Initial sort, e.g. "stage" to show grade progression first */
+  defaultSort?: string;
 }
 
 const ALL = "all";
 
-export function ContentLibrary({ resources, basePath, role, locked, lockType }: ContentLibraryProps) {
+export function ContentLibrary({ resources, basePath, role, locked, lockType, defaultSort }: ContentLibraryProps) {
   const [query, setQuery] = useState("");
   const [programme, setProgramme] = useState(ALL);
   const [stage, setStage] = useState(ALL);
@@ -29,7 +32,7 @@ export function ContentLibrary({ resources, basePath, role, locked, lockType }: 
   const [difficulty, setDifficulty] = useState(ALL);
   const [type, setType] = useState<string>(lockType ?? ALL);
   const [purpose, setPurpose] = useState(ALL);
-  const [sort, setSort] = useState("popular");
+  const [sort, setSort] = useState(defaultSort ?? "popular");
   const [showFilters, setShowFilters] = useState(false);
   const [assignTarget, setAssignTarget] = useState<Resource | null>(null);
 
@@ -62,6 +65,7 @@ export function ContentLibrary({ resources, basePath, role, locked, lockType }: 
       );
     });
     out = [...out].sort((a, b) => {
+      if (sort === "stage") return gradeRank(a) - gradeRank(b) || (b.plays ?? 0) - (a.plays ?? 0);
       if (sort === "popular") return (b.plays ?? 0) - (a.plays ?? 0);
       if (sort === "rating") return (b.rating ?? 0) - (a.rating ?? 0);
       if (sort === "duration") return a.durationMins - b.durationMins;
@@ -93,6 +97,7 @@ export function ContentLibrary({ resources, basePath, role, locked, lockType }: 
         />
         <div className="flex items-center gap-2">
           <Select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort" className="w-auto">
+            <option value="stage">By stage (low→high)</option>
             <option value="popular">Most popular</option>
             <option value="rating">Top rated</option>
             <option value="duration">Shortest first</option>

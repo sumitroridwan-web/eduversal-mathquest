@@ -34,7 +34,7 @@ export default function StudentAssignments() {
             const overdue = new Date(a.dueDate) < new Date("2026-07-11") && a.status !== "completed";
             return (
               <div key={a.assignmentId} className="flex flex-col gap-3 rounded-2xl border border-navy-100 bg-white p-4 shadow-card sm:flex-row sm:items-center">
-                {res && <ResourceCover cover={res.cover} type={res.type} className="h-16 w-full rounded-xl sm:w-16" size="sm" />}
+                {res && <ResourceCover resource={res} className="h-16 w-full rounded-xl sm:w-16" size="sm" />}
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-lg" aria-hidden>{typeIcon[a.type]}</span>

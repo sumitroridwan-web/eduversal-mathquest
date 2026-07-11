@@ -41,7 +41,7 @@ export default function HomeLearning() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {suggestions.map((r) => (
             <div key={r.id} className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
-              <ResourceCover cover={r.cover} type={r.type} className="h-24 w-full" size="sm" />
+              <ResourceCover resource={r} className="h-24 w-full" size="sm" />
               <div className="p-4">
                 <div className="mb-1 flex gap-1.5"><Badge tone="teal">{stageLabel(r)}</Badge></div>
                 <h3 className="font-semibold text-navy-900">{r.title}</h3>

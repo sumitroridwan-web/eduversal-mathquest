@@ -10,6 +10,7 @@ export default function StudentBooks() {
       basePath="/student"
       role="student"
       lockType="book"
+      defaultSort="stage"
     />
   );
 }

@@ -18,7 +18,7 @@ export default function ParentAssignments() {
           const res = resources.find((r) => r.title === a.resourceTitle);
           return (
             <div key={a.assignmentId} className="flex items-center gap-4 rounded-2xl border border-navy-100 bg-white p-4 shadow-card">
-              {res && <ResourceCover cover={res.cover} type={res.type} className="h-14 w-14 rounded-xl" size="sm" />}
+              {res && <ResourceCover resource={res} className="h-14 w-14 rounded-xl" size="sm" />}
               <div className="flex-1">
                 <p className="font-semibold text-navy-900">{a.resourceTitle}</p>
                 <p className="text-sm text-navy-500">{a.title}</p>

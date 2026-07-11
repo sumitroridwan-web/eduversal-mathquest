@@ -10,6 +10,7 @@ export default function StudentSimulations() {
       basePath="/student"
       role="student"
       lockType="simulation"
+      defaultSort="stage"
     />
   );
 }

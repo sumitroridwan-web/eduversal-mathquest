@@ -54,7 +54,7 @@ export default function QuestPaths() {
                 return (
                   <li key={step.resourceId} className="flex items-center gap-3 rounded-xl bg-surface-soft p-2.5">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy-900 text-xs font-bold text-white">{i + 1}</span>
-                    {r && <ResourceCover cover={r.cover} type={r.type} className="h-8 w-8 rounded-md" size="sm" />}
+                    {r && <ResourceCover resource={r} className="h-8 w-8 rounded-md" size="sm" />}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-navy-900">{r?.title}</p>
                       <p className="text-xs text-navy-400">{step.label}</p>
@@ -127,7 +127,7 @@ export default function QuestPaths() {
             <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
               {resources.filter((r) => r.status === "published" && !steps.find((s) => s.id === r.id)).slice(0, 12).map((r) => (
                 <button key={r.id} onClick={() => addStep(r)} className="flex items-center gap-2 rounded-xl border border-navy-100 p-2 text-left hover:border-teal-400">
-                  <ResourceCover cover={r.cover} type={r.type} className="h-8 w-8 rounded-md" size="sm" />
+                  <ResourceCover resource={r} className="h-8 w-8 rounded-md" size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-navy-900">{r.title}</span>
                     <span className="block text-xs text-navy-400">{stageLabel(r)}</span>

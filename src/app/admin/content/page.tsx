@@ -40,7 +40,7 @@ export default function AdminContent() {
       header: "Resource",
       render: (r) => (
         <Link href={`/admin/library/${r.id}`} className="flex items-center gap-3 hover:text-teal-700">
-          <ResourceCover cover={r.cover} type={r.type} className="h-10 w-10 rounded-lg" size="sm" />
+          <ResourceCover resource={r} className="h-10 w-10 rounded-lg" size="sm" />
           <div>
             <p className="font-semibold text-navy-900">{r.title}</p>
             <p className="text-xs text-navy-400">{r.curriculumRef}</p>

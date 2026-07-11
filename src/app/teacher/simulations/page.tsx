@@ -10,6 +10,7 @@ export default function TeacherSimulations() {
       basePath="/teacher"
       role="teacher"
       lockType="simulation"
+      defaultSort="stage"
     />
   );
 }

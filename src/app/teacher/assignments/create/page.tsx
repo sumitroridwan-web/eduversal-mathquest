@@ -151,7 +151,7 @@ export default function CreateAssignment() {
             <ul className="space-y-2">
               {selected.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 rounded-xl border border-navy-100 p-2.5">
-                  <ResourceCover cover={r.cover} type={r.type} className="h-10 w-10 rounded-lg" size="sm" />
+                  <ResourceCover resource={r} className="h-10 w-10 rounded-lg" size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-navy-900">{r.title}</p>
                     <p className="text-xs text-navy-400">{stageLabel(r)} · {r.curriculumRef}</p>
@@ -214,7 +214,7 @@ export default function CreateAssignment() {
                 onClick={() => toggleResource(r)}
                 className={`flex items-center gap-3 rounded-xl border p-2.5 text-left transition-colors ${isSel ? "border-teal-500 bg-teal-50" : "border-navy-100 hover:border-navy-300"}`}
               >
-                <ResourceCover cover={r.cover} type={r.type} className="h-10 w-10 rounded-lg" size="sm" />
+                <ResourceCover resource={r} className="h-10 w-10 rounded-lg" size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-navy-900">{r.title}</p>
                   <p className="text-xs text-navy-400">{stageLabel(r)}</p>

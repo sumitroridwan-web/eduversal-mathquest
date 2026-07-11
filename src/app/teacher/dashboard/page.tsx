@@ -98,7 +98,7 @@ export default function TeacherDashboard() {
         <div className="grid gap-4 sm:grid-cols-3">
           {recommended.map((r) => (
             <Link key={r.id} href={`/teacher/library/${r.id}`} className="group overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
-              <ResourceCover cover={r.cover} type={r.type} className="h-24 w-full" size="sm" />
+              <ResourceCover resource={r} className="h-24 w-full" size="sm" />
               <div className="p-4">
                 <p className="font-semibold text-navy-900 group-hover:text-teal-700">{r.title}</p>
                 <p className="mt-1 text-xs text-navy-400">{r.strand} · {r.difficulty}</p>

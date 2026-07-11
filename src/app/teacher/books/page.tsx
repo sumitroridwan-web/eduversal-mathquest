@@ -10,6 +10,7 @@ export default function TeacherBooks() {
       basePath="/teacher"
       role="teacher"
       lockType="book"
+      defaultSort="stage"
     />
   );
 }

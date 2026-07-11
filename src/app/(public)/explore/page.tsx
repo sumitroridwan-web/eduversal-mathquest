@@ -44,7 +44,7 @@ export default function ExplorePage() {
 
       <div className="mt-8">
         <Tabs tabs={tabs} active={tab} onChange={setTab} className="mb-6 w-fit" />
-        <ContentLibrary resources={list} basePath="/explore" locked />
+        <ContentLibrary resources={list} basePath="/explore" locked defaultSort="stage" />
       </div>
     </div>
   );

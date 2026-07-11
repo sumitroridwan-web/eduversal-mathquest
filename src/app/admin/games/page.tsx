@@ -10,6 +10,7 @@ export default function AdminGames() {
       basePath="/admin"
       role="admin"
       lockType="game"
+      defaultSort="stage"
     />
   );
 }

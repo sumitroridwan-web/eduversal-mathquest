@@ -10,6 +10,7 @@ export default function StudentGames() {
       basePath="/student"
       role="student"
       lockType="game"
+      defaultSort="stage"
     />
   );
 }

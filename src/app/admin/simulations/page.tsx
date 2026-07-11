@@ -10,6 +10,7 @@ export default function AdminSimulations() {
       basePath="/admin"
       role="admin"
       lockType="simulation"
+      defaultSort="stage"
     />
   );
 }

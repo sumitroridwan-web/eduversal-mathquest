@@ -10,6 +10,7 @@ export default function AdminBooks() {
       basePath="/admin"
       role="admin"
       lockType="book"
+      defaultSort="stage"
     />
   );
 }

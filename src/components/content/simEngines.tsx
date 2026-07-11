@@ -8,6 +8,19 @@ import { Badge } from "@/components/ui/Badge";
 import { useToasts } from "@/stores/ui";
 import { cn, clamp } from "@/lib/utils";
 import { simPreset } from "@/config/simPresets";
+import { craFor } from "@/lib/cra";
+
+// Concrete "fruit" counter for Early Years / lower grades (CRA — concrete);
+// higher grades use plain coloured discs (pictorial/abstract).
+function Fruit({ tone = "teal", px = 26 }: { tone?: "teal" | "accent" | "red"; px?: number }) {
+  const bg = tone === "accent" ? "#f59e0b" : tone === "red" ? "#ef4444" : "#14b8a6";
+  return (
+    <span className="relative inline-block" style={{ width: px, height: px }} aria-hidden>
+      <span className="absolute inset-x-0 bottom-0 rounded-full ring-1 ring-white/80" style={{ height: px, background: bg }} />
+      <span className="absolute rounded-full bg-emerald-600" style={{ width: px * 0.3, height: px * 0.3, top: -px * 0.05, left: px * 0.52 }} />
+    </span>
+  );
+}
 
 // ==========================================================
 // Bespoke interactive engines. Each simulation drives its engine
@@ -160,14 +173,18 @@ function TenFrameMain({ resource }: { resource: Resource }) {
 }
 function CombineFrames({ resource }: { resource: Resource }) {
   const p = simPreset(resource.id);
+  const concrete = craFor(resource) === "concrete";
   const [a, setA] = useState(3);
   const [b, setB] = useState(2);
+  const dot = (tone: "teal" | "accent") => concrete
+    ? <Fruit tone={tone} px={28} />
+    : <span className={cn("h-7 w-7 rounded-full", tone === "accent" ? "bg-accent-400" : "bg-teal-500")} />;
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => { setA(3); setB(2); }}>
       <Intro>{p.intro ?? "Put the two groups together and count them all."}</Intro>
       <div className="space-y-3 rounded-2xl bg-surface-soft p-4">
-        <div className="flex items-center gap-2"><span className="w-16 text-sm font-semibold text-teal-700">Group A</span><div className="flex flex-wrap gap-1.5">{Array.from({ length: a }).map((_, i) => <span key={i} className="h-7 w-7 rounded-full bg-teal-500" />)}</div></div>
-        <div className="flex items-center gap-2"><span className="w-16 text-sm font-semibold text-accent-700">Group B</span><div className="flex flex-wrap gap-1.5">{Array.from({ length: b }).map((_, i) => <span key={i} className="h-7 w-7 rounded-full bg-accent-400" />)}</div></div>
+        <div className="flex items-center gap-2"><span className="w-16 text-sm font-semibold text-teal-700">Group A</span><div className="flex flex-wrap gap-1.5">{Array.from({ length: a }).map((_, i) => <span key={i}>{dot("teal")}</span>)}</div></div>
+        <div className="flex items-center gap-2"><span className="w-16 text-sm font-semibold text-accent-700">Group B</span><div className="flex flex-wrap gap-1.5">{Array.from({ length: b }).map((_, i) => <span key={i}>{dot("accent")}</span>)}</div></div>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <Stepper label="Group A" value={a} set={setA} min={0} max={10} />
@@ -395,6 +412,7 @@ function DecimalPlaceValue({ resource }: { resource: Resource }) {
 function ArrayEngine({ resource }: { resource: Resource }) {
   const p = simPreset(resource.id);
   const doubles = Boolean(p.arDoubles);
+  const concrete = craFor(resource) === "concrete";
   const [maxSize, setMaxSize] = useState(10);
   const [showAdd, setShowAdd] = useState(true);
   const [rows, setRows] = useState(doubles ? 2 : 3);
@@ -414,7 +432,9 @@ function ArrayEngine({ resource }: { resource: Resource }) {
       </div>
       <div className="flex justify-center overflow-x-auto rounded-2xl bg-surface-soft p-5">
         <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
-          {Array.from({ length: rows * cols }).map((_, i) => <span key={i} className={cn("h-5 w-5 rounded-full", doubles && i >= cols ? "bg-accent-400" : "bg-teal-500")} />)}
+          {Array.from({ length: rows * cols }).map((_, i) => concrete
+            ? <Fruit key={i} tone={doubles && i >= cols ? "accent" : "teal"} px={20} />
+            : <span key={i} className={cn("h-5 w-5 rounded-full", doubles && i >= cols ? "bg-accent-400" : "bg-teal-500")} />)}
         </div>
       </div>
       <div className="mt-4 text-center">

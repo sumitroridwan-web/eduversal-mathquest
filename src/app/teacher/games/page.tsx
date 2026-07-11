@@ -10,6 +10,7 @@ export default function TeacherGames() {
       basePath="/teacher"
       role="teacher"
       lockType="game"
+      defaultSort="stage"
     />
   );
 }

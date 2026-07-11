@@ -249,7 +249,7 @@ function PreviewCard({ resource }: { resource: Resource }) {
   return (
     <div className="group overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
       <div className="relative">
-        <ResourceCover cover={resource.cover} type={resource.type} className="h-32 w-full" />
+        <ResourceCover resource={resource} className="h-32 w-full" />
         <div className="absolute inset-0 flex items-center justify-center bg-navy-950/40 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
           <Link href="/login" className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-navy-800">
             <Lock className="h-3.5 w-3.5" /> Login to unlock

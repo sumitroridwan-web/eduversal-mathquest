@@ -41,7 +41,7 @@ export default function MyQuest() {
                 <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold", done ? "bg-teal-600 text-white" : current ? "bg-accent-400 text-navy-900" : "bg-navy-100 text-navy-400")}>
                   {done ? <CheckCircle2 className="h-5 w-5" /> : i + 1}
                 </span>
-                <ResourceCover cover={r.cover} type={r.type} className="h-14 w-14 rounded-xl" size="sm" />
+                <ResourceCover resource={r} className="h-14 w-14 rounded-xl" size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-navy-900">{r.title}</p>
                   <p className="text-xs text-navy-400">{step.label} · {r.durationMins} min</p>

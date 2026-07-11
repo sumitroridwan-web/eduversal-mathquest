@@ -11,6 +11,7 @@ export function LibraryView({
   basePath,
   role,
   lockType,
+  defaultSort,
 }: {
   title: string;
   description: string;
@@ -18,11 +19,12 @@ export function LibraryView({
   basePath: string;
   role: Role;
   lockType?: ContentType;
+  defaultSort?: string;
 }) {
   return (
     <div className="space-y-6">
       <PageHeading title={title} description={description} />
-      <ContentLibrary resources={resources} basePath={basePath} role={role} lockType={lockType} />
+      <ContentLibrary resources={resources} basePath={basePath} role={role} lockType={lockType} defaultSort={defaultSort} />
     </div>
   );
 }

@@ -68,7 +68,7 @@ export default function StudentDashboard() {
             <h2 className="font-display text-lg font-semibold text-navy-900">Today&apos;s Quest</h2>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row">
-            <ResourceCover cover={todaysQuest.cover} type={todaysQuest.type} className="h-28 w-full rounded-xl sm:w-40" />
+            <ResourceCover resource={todaysQuest} className="h-28 w-full rounded-xl sm:w-40" />
             <div className="flex-1">
               <h3 className="font-display text-lg font-bold text-navy-900">{todaysQuest.title}</h3>
               <p className="mt-1 text-sm text-navy-600">“{todaysQuest.objective.student}”</p>
@@ -129,7 +129,7 @@ export default function StudentDashboard() {
               const res = resources.find((r) => r.title === a.resourceTitle);
               return (
                 <li key={a.assignmentId} className="flex items-center gap-3 rounded-xl border border-navy-100 p-3">
-                  {res && <ResourceCover cover={res.cover} type={res.type} className="h-12 w-12 rounded-lg" size="sm" />}
+                  {res && <ResourceCover resource={res} className="h-12 w-12 rounded-lg" size="sm" />}
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-navy-900">{a.resourceTitle}</p>
                     <p className="text-xs text-navy-400">{a.title}</p>
@@ -197,7 +197,7 @@ export default function StudentDashboard() {
         <div className="grid gap-4 sm:grid-cols-3">
           {recommended.map((r) => (
             <Link key={r.id} href={`/student/library/${r.id}`} className="group overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
-              <ResourceCover cover={r.cover} type={r.type} className="h-24 w-full" size="sm" />
+              <ResourceCover resource={r} className="h-24 w-full" size="sm" />
               <div className="p-4">
                 <p className="font-semibold text-navy-900 group-hover:text-teal-700">{r.title}</p>
                 <p className="mt-0.5 text-xs text-navy-400">{r.type === "book" ? "Book" : r.type === "game" ? "Game" : "Simulation"} · {r.durationMins} min</p>

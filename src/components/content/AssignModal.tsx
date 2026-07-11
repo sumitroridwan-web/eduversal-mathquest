@@ -57,7 +57,7 @@ export function AssignModal({
     >
       <div className="space-y-5">
         <div className="flex gap-3 rounded-xl border border-navy-100 bg-surface-soft p-3">
-          <ResourceCover cover={resource.cover} type={resource.type} className="h-16 w-16 rounded-lg" size="sm" />
+          <ResourceCover resource={resource} className="h-16 w-16 rounded-lg" size="sm" />
           <div>
             <p className="font-semibold text-navy-900">{resource.title}</p>
             <p className="text-sm text-navy-500">
