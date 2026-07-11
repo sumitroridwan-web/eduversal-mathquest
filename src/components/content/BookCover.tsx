@@ -11,7 +11,7 @@ import { FONT, Star } from "./storyKit";
 // ==========================================================
 
 const LEVEL_TAG: Record<Level, string> = {
-  EY: "Ages 3–4", KG: "Ages 4–5", G1: "Grade 1", G2: "Grade 2", G3: "Grade 3", G4: "Grade 4", G5: "Grade 5",
+  EY: "Ages 3–4", KG: "Ages 4–5", G1: "Grade 1", G2: "Grade 2", G3: "Grade 3", G4: "Grade 4", G5: "Grade 5", G6: "Grade 6",
 };
 
 function wrap(title: string, max: number): string[] {

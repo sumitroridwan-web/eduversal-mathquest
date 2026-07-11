@@ -8,7 +8,7 @@ import * as K from "@/components/content/storyKit";
 // Add a new title by pushing another StoryBook object.
 // ==========================================================
 
-export type Level = "EY" | "KG" | "G1" | "G2" | "G3" | "G4" | "G5";
+export type Level = "EY" | "KG" | "G1" | "G2" | "G3" | "G4" | "G5" | "G6";
 
 export interface CheckOption { emoji?: string; num?: string; text?: string; svg?: React.ReactNode }
 export interface CheckItem { prompt: string; narration?: string; options: CheckOption[]; answer: number }
@@ -267,7 +267,122 @@ const dataDetectives: StoryBook = {
   ],
 };
 
-export const storybooks: StoryBook[] = [nurseryDucks, countingGarden, shapeCity, marketDay, roboBakery, fractionFeast, dataDetectives];
+// ==========================================================
+// 8. KINDERGARTEN 2 — Repeating patterns — "The Pattern Parade"
+// ==========================================================
+function balloonRow(fills: (string | null)[], cx: number, gap: number, y: number) {
+  const x0 = cx - ((fills.length - 1) * gap) / 2;
+  return fills.map((f, i) => f
+    ? <K.Balloon key={i} x={x0 + i * gap} y={y} s={1.1} fill={f} />
+    : <g key={i}><rect x={x0 + i * gap - 14} y={y - 16} width={28} height={32} rx={8} fill="none" stroke="#7c3aed" strokeWidth={2.5} strokeDasharray="5 4" /><text x={x0 + i * gap} y={y + 2} fontSize={20} fontWeight={800} fill="#7c3aed" textAnchor="middle" dominantBaseline="central" fontFamily={K.FONT}>?</text></g>);
+}
+const R = "#f43f5e", B = "#4fc3f7", Y = "#ffd84d", G = "#8ed081";
+const patternParade: StoryBook = {
+  id: "res-book-pattern-parade",
+  title: "The Pattern Parade",
+  subtitle: "What comes next in the row?",
+  level: "KG", audio: true,
+  accent: "#7c3aed", coverFrom: "#efe3ff", coverTo: "#faf6ff", titleColor: "#4c1d95",
+  characters: [{ name: "Lulu", role: "the cheerful parade leader" }, { name: "Pim", role: "a pattern-loving bird" }],
+  cover: <g><K.Sky from="#efe3ff" to="#faf6ff" /><K.Hill y={168} fill="#c9b3f0" /><K.Ground y={178} fill="#b79ae8" />{balloonRow([R, B, R, B], 160, 44, 96)}<K.Kid x={70} y={172} s={1.15} shirt="#7c3aed" hairStyle="pony" hair="#3a2a1e" expr="excited" arm="wave" /><K.Bird x={252} y={150} s={1} body="#ffd84d" expr="happy" /></g>,
+  pages: [
+    { text: "A parade is coming! Lulu hangs balloons: red, blue, red, blue.", narration: "A parade is coming! Lulu hangs balloons. Red, blue, red, blue.",
+      scene: <g><K.Sky from="#efe3ff" to="#faf6ff" /><K.Ground y={184} fill="#b79ae8" />{balloonRow([R, B, R, B], 175, 46, 90)}<K.Kid x={60} y={172} s={1.2} shirt="#7c3aed" hairStyle="pony" expr="happy" arm="up" /></g> },
+    { text: "\"What comes next?\" chirps Pim. Red, blue, red, blue… red!", narration: "What comes next, chirps Pim. Red, blue, red, blue… red!",
+      scene: <g><K.Sky from="#efe3ff" to="#faf6ff" /><K.Ground y={184} fill="#b79ae8" />{balloonRow([R, B, R, B, null], 160, 46, 96)}<K.Bird x={280} y={150} s={1} body="#ffd84d" expr="excited" /></g> },
+    { text: "The flower float is next: yellow, pink, yellow, pink.", narration: "The flower float is next. Yellow, pink, yellow, pink.",
+      scene: <g><K.Sky from="#efe3ff" to="#faf6ff" /><K.Ground y={184} fill="#b79ae8" />{row(5, 52, 130, 160, (x, i) => <K.Flower x={x} y={0} s={1.4} petal={i % 2 === 0 ? "#ffd84d" : "#ff6b9d"} />)}</g> },
+    { text: "The drums make a pattern too: big, big, small — big, big, small!", narration: "The drums make a pattern too. Big, big, small. Big, big, small!",
+      scene: <g><K.Sky from="#efe3ff" to="#faf6ff" /><K.Ground y={184} fill="#b79ae8" />{[18, 18, 11, 18, 18, 11].map((rr, i) => <g key={i}><circle cx={40 + i * 46} cy={120} r={rr} fill="#c65d2e" stroke="#8a3d1a" strokeWidth={2} /><circle cx={40 + i * 46} cy={120} r={rr * 0.6} fill="#e8945f" /></g>)}</g> },
+    { text: "Patterns everywhere — the parade looks perfect! Hip hip hooray!", narration: "Patterns everywhere. The parade looks perfect! Hip hip hooray!",
+      scene: <g><K.Sky from="#ffe1c4" to="#fff5ea" /><K.Ground y={184} fill="#b79ae8" />{balloonRow([R, B, Y, R, B, Y], 160, 42, 80)}<K.Kid x={110} y={172} s={1.2} shirt="#7c3aed" hairStyle="pony" expr="excited" arm="up" /><K.Bird x={210} y={150} s={0.9} body="#ffd84d" expr="excited" /><K.Star x={280} y={60} s={2.2} /></g> },
+  ],
+  check: [
+    { prompt: "Red, blue, red, blue, __ ? Tap what comes next.", narration: "Red, blue, red, blue. What comes next?", options: [{ svg: <circle r={13} fill={B} /> }, { svg: <circle r={13} fill={R} /> }, { svg: <circle r={13} fill={Y} /> }], answer: 1 },
+    { prompt: "Yellow, pink, yellow, pink, __ ?", narration: "Yellow, pink, yellow, pink. What comes next?", options: [{ svg: <circle r={13} fill="#ff6b9d" /> }, { svg: <circle r={13} fill={Y} /> }], answer: 1 },
+    { prompt: "Which row is a REPEATING pattern?", options: [{ emoji: "🔴🔵🔴🔵" }, { emoji: "🔴🔵🟡🟢" }], answer: 0 },
+    { prompt: "Big, big, small, big, big, __ ?", narration: "Big, big, small, big, big. What comes next?", options: [{ svg: <circle r={8} fill="#c65d2e" /> }, { svg: <circle r={15} fill="#c65d2e" /> }], answer: 0 },
+  ],
+};
+
+// ==========================================================
+// 9. GRADE 3 — Telling the time — "The Clock Tower Mystery"
+// ==========================================================
+function clock(cx: number, cy: number, r: number, h: number, m: number) {
+  const ha = ((h % 12) + m / 60) / 12 * 360, ma = (m / 60) * 360;
+  return <g>
+    <circle cx={cx} cy={cy} r={r} fill="#fff" stroke="#1b2540" strokeWidth={3} />
+    {Array.from({ length: 12 }).map((_, i) => { const a = (i / 12) * 2 * Math.PI; return <circle key={i} cx={cx + (r - 7) * Math.sin(a)} cy={cy - (r - 7) * Math.cos(a)} r={2} fill="#1b2540" />; })}
+    <line x1={cx} y1={cy} x2={cx} y2={cy - r * 0.5} stroke="#1b2540" strokeWidth={4} strokeLinecap="round" transform={`rotate(${ha} ${cx} ${cy})`} />
+    <line x1={cx} y1={cy} x2={cx} y2={cy - r * 0.78} stroke="#f59e0b" strokeWidth={3} strokeLinecap="round" transform={`rotate(${ma} ${cx} ${cy})`} />
+    <circle cx={cx} cy={cy} r={3.5} fill="#1b2540" />
+  </g>;
+}
+const clockTower: StoryBook = {
+  id: "res-book-clock-tower",
+  title: "The Clock Tower Mystery",
+  subtitle: "Reading the time to save the day",
+  level: "G3", audio: false,
+  accent: "#3a4e75", coverFrom: "#dbe4f0", coverTo: "#eef2f8", titleColor: "#26346b",
+  characters: [{ name: "Sam", role: "a quick-thinking helper" }, { name: "Tock", role: "the town's clockwork cat" }],
+  cover: <g><K.Sky from="#dbe4f0" to="#eef2f8" /><K.Ground y={186} fill="#a9c08a" /><rect x={132} y={70} width={56} height={116} fill="#c9a06a" stroke="#8a6a3f" strokeWidth={2} /><path d="M126 70 L160 40 L194 70 Z" fill="#8a3d1a" />{clock(160, 100, 22, 3, 0)}<K.Cat x={230} y={168} s={1.2} body="#b39ddb" expr="worried" /><K.Kid x={64} y={170} s={1.1} shirt="#3a4e75" hairStyle="cap" hair="#3a2a1e" expr="think" /></g>,
+  pages: [
+    { text: "Disaster! The great clock tower has stopped at 3 o'clock, and the whole town is muddled.",
+      scene: <g><K.Sky from="#dbe4f0" to="#eef2f8" /><K.Ground y={186} fill="#a9c08a" /><rect x={120} y={54} width={70} height={132} fill="#c9a06a" stroke="#8a6a3f" strokeWidth={2} /><path d="M112 54 L155 22 L198 54 Z" fill="#8a3d1a" />{clock(155, 92, 28, 3, 0)}<K.Cat x={250} y={170} s={1.2} body="#b39ddb" expr="worried" /></g> },
+    { text: "\"School starts at 9 o'clock,\" says Sam, checking the timetable. The little hand points to 9.",
+      scene: <g><K.Sky from="#dbe4f0" to="#eef2f8" /><K.Ground y={186} fill="#a9c08a" />{clock(110, 110, 46, 9, 0)}<text x={230} y={100} fontSize={26} fontWeight={800} fill="#26346b" textAnchor="middle" fontFamily={K.FONT}>9:00</text><text x={230} y={128} fontSize={14} fontWeight={700} fill="#3a4e75" textAnchor="middle" fontFamily={K.FONT}>Nine o&apos;clock</text></g> },
+    { text: "Break is at half past ten. The big hand points to 6, halfway around — that means 10:30.",
+      scene: <g><K.Sky from="#dbe4f0" to="#eef2f8" /><K.Ground y={186} fill="#a9c08a" />{clock(110, 110, 46, 10, 30)}<text x={230} y={100} fontSize={26} fontWeight={800} fill="#26346b" textAnchor="middle" fontFamily={K.FONT}>10:30</text><text x={230} y={128} fontSize={13} fontWeight={700} fill="#3a4e75" textAnchor="middle" fontFamily={K.FONT}>Half past ten</text></g> },
+    { text: "Sam and Tock wind the great spring. Tick… tick… TICK! The hands leap to 12 o'clock — lunchtime!",
+      scene: <g><K.Sky from="#dbe4f0" to="#eef2f8" /><K.Ground y={186} fill="#a9c08a" />{clock(120, 108, 48, 12, 0)}<K.Cat x={250} y={170} s={1.2} body="#b39ddb" expr="excited" /><K.Star x={210} y={56} s={2} /></g> },
+    { text: "The town cheers — every clock is right again. \"Time saved!\" laugh Sam and Tock.",
+      scene: <g><K.Sky from="#ffe1c4" to="#fff5ea" /><K.Ground y={186} fill="#a9c08a" />{clock(160, 96, 30, 12, 0)}<K.Kid x={80} y={172} s={1.2} shirt="#3a4e75" hairStyle="cap" expr="excited" arm="up" /><K.Cat x={240} y={172} s={1.1} body="#b39ddb" expr="excited" /><K.Star x={40} y={56} s={2.2} /><K.Star x={286} y={62} s={2.2} /></g> },
+  ],
+  check: [
+    { prompt: "What time does this clock show?", narration: "What time does this clock show?", options: [{ text: "9:00" }, { text: "3:00" }, { text: "6:00" }], answer: 0 },
+    { prompt: "\"Half past ten\" means the big hand points to…", options: [{ text: "12" }, { text: "6" }, { text: "3" }], answer: 1 },
+    { prompt: "Which clock shows 12 o'clock?", options: [{ svg: clock(0, 0, 18, 12, 0) }, { svg: clock(0, 0, 18, 3, 0) }, { svg: clock(0, 0, 18, 9, 0) }], answer: 0 },
+    { prompt: "School starts at 9:00. It is now 8:00. How many hours to wait?", narration: "School starts at nine. It is now eight. How many hours to wait?", options: [num(1), num(2), num(3)], answer: 0 },
+  ],
+};
+
+// ==========================================================
+// 10. GRADE 6 — Ratio & proportion — "Chef Volt's Secret Smoothie"
+// ==========================================================
+function scoops(x: number, y: number, n: number, fill: string, stroke: string) {
+  return <g>{Array.from({ length: n }).map((_, i) => <circle key={i} cx={x + (i % 4) * 20} cy={y + Math.floor(i / 4) * 20} r={9} fill={fill} stroke={stroke} strokeWidth={1.5} />)}</g>;
+}
+const smoothie: StoryBook = {
+  id: "res-book-smoothie-ratio",
+  title: "Chef Volt's Secret Smoothie",
+  subtitle: "Scaling a recipe with ratio",
+  level: "G6", audio: false,
+  accent: "#199473", coverFrom: "#c9f0e4", coverTo: "#eefbf7", titleColor: "#0c6b58",
+  characters: [{ name: "Chef Volt", role: "a precise robot chef" }, { name: "Iris", role: "a sharp young apprentice" }],
+  cover: <g><K.Sky from="#c9f0e4" to="#eefbf7" /><K.Ground y={184} fill="#bfe3cf" />
+    <rect x={132} y={104} width={40} height={56} rx={6} fill="#8ed0c0" stroke="#3aa79c" strokeWidth={2} /><rect x={137} y={112} width={30} height={40} rx={3} fill="#ffb420" opacity={0.85} />
+    <K.Robot x={230} y={168} s={1.5} body="#7fd1c9" expr="happy" /><K.Kid x={62} y={172} s={1.1} shirt="#199473" hairStyle="curly" hair="#1a1a1a" expr="excited" /></g>,
+  pages: [
+    { text: "Chef Volt's smoothies are legendary. The secret is a perfect ratio: 1 scoop of mango to 2 scoops of milk.",
+      scene: <g><K.Sky from="#c9f0e4" to="#eefbf7" /><K.Ground y={186} fill="#bfe3cf" /><K.Robot x={110} y={168} s={1.7} body="#7fd1c9" expr="excited" /><rect x={210} y={96} width={44} height={64} rx={7} fill="#8ed0c0" stroke="#3aa79c" strokeWidth={2} /><rect x={216} y={106} width={32} height={46} rx={3} fill="#ffb420" opacity={0.8} /></g> },
+    { text: "For one glass, Volt scoops 1 mango and 2 milk. We write the ratio as 1 : 2.",
+      scene: <g><K.Sky from="#c9f0e4" to="#eefbf7" /><K.Ground y={186} fill="#bfe3cf" />{scoops(70, 100, 1, "#ffb420", "#e0930f")}<text x={100} y={128} fontSize={12} fontWeight={700} fill="#7a3d00" textAnchor="middle" fontFamily={K.FONT}>mango</text><text x={160} y={104} fontSize={30} fontWeight={800} fill="#0c6b58" textAnchor="middle" fontFamily={K.FONT}>:</text>{scoops(200, 100, 2, "#eaf4ff", "#4a7bb5")}<text x={210} y={128} fontSize={12} fontWeight={700} fill="#3a4e75" textAnchor="middle" fontFamily={K.FONT}>milk</text><text x={160} y={168} fontSize={22} fontWeight={800} fill="#0c6b58" textAnchor="middle" fontFamily={K.FONT}>1 : 2</text></g> },
+    { text: "Then four friends arrive! Volt scales the recipe up: 4 mango to 8 milk. Same taste, bigger batch.",
+      scene: <g><K.Sky from="#c9f0e4" to="#eefbf7" /><K.Ground y={186} fill="#bfe3cf" />{scoops(52, 92, 4, "#ffb420", "#e0930f")}<text x={160} y={104} fontSize={28} fontWeight={800} fill="#0c6b58" textAnchor="middle" fontFamily={K.FONT}>:</text>{scoops(196, 92, 8, "#eaf4ff", "#4a7bb5")}<text x={160} y={170} fontSize={20} fontWeight={800} fill="#0c6b58" textAnchor="middle" fontFamily={K.FONT}>4 : 8 = 1 : 2</text></g> },
+    { text: "Iris checks the maths: 4 to 8 divides down to 1 to 2. \"Equivalent ratios!\" she grins.",
+      scene: <g><K.Sky from="#c9f0e4" to="#eefbf7" /><K.Ground y={186} fill="#bfe3cf" /><text x={160} y={80} fontSize={20} fontWeight={800} fill="#0c6b58" textAnchor="middle" fontFamily={K.FONT}>4 : 8</text><text x={160} y={110} fontSize={14} fontWeight={700} fill="#3a4e75" textAnchor="middle" fontFamily={K.FONT}>÷4    ÷4</text><text x={160} y={140} fontSize={20} fontWeight={800} fill="#199473" textAnchor="middle" fontFamily={K.FONT}>= 1 : 2</text><K.Kid x={264} y={172} s={1.1} shirt="#199473" hairStyle="curly" expr="proud" /></g> },
+    { text: "Every glass tastes exactly right. \"Keep the ratio,\" beeps Volt, \"and the recipe never fails!\"",
+      scene: <g><K.Sky from="#ffe1c4" to="#fff5ea" /><K.Ground y={186} fill="#bfe3cf" />{row(4, 44, 120, 130, () => <g><rect x={-11} y={-24} width={22} height={40} rx={4} fill="#8ed0c0" stroke="#3aa79c" strokeWidth={1.5} /><rect x={-7} y={-16} width={14} height={28} rx={2} fill="#ffb420" opacity={0.8} /></g>)}<K.Robot x={250} y={172} s={1.2} body="#7fd1c9" expr="excited" /><K.Star x={40} y={56} s={2.2} /></g> },
+  ],
+  check: [
+    { prompt: "The smoothie ratio is 1 mango : 2 milk. For 3 mango, how much milk?", narration: "The ratio is one mango to two milk. For three mango, how much milk?", options: [num(4), num(6), num(3)], answer: 1 },
+    { prompt: "Which ratio is equivalent to 1 : 2?", options: [{ text: "2 : 3" }, { text: "4 : 8" }, { text: "3 : 5" }], answer: 1 },
+    { prompt: "Simplify the ratio 6 : 12.", narration: "Simplify the ratio six to twelve.", options: [{ text: "1 : 2" }, { text: "1 : 3" }, { text: "2 : 3" }], answer: 0 },
+    { prompt: "Keeping a ratio the same when you scale a recipe keeps the…", options: [{ text: "taste the same" }, { text: "taste different" }], answer: 0 },
+  ],
+};
+
+export const storybooks: StoryBook[] = [nurseryDucks, countingGarden, patternParade, shapeCity, marketDay, clockTower, roboBakery, fractionFeast, dataDetectives, smoothie];
 
 export function getStorybook(id: string): StoryBook | undefined {
   return storybooks.find((b) => b.id === id);
