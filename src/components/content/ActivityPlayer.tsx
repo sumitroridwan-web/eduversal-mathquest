@@ -9,6 +9,7 @@ import { useToasts } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import { SimulationEngine } from "./simEngines";
 import { GameEngine } from "./gameEngines";
+import { PresentStage } from "./PresentStage";
 
 /**
  * The activity player adapts to the resource type: bespoke interactive
@@ -49,6 +50,7 @@ function BookReader({ resource }: { resource: Resource }) {
   };
 
   return (
+    <PresentStage title={resource.title} buttonLabel="Read full screen" defaultZoom={1.15} stageWidth={760}>
     <div className="rounded-2xl border border-navy-100 bg-white shadow-card">
       <div className="flex items-center justify-between border-b border-navy-100 p-4">
         <div className="flex items-center gap-2">
@@ -111,5 +113,6 @@ function BookReader({ resource }: { resource: Resource }) {
         </Button>
       </div>
     </div>
+    </PresentStage>
   );
 }

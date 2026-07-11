@@ -6,6 +6,7 @@ import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
 import { gradeRank } from "@/lib/cra";
+import { PresentStage } from "./PresentStage";
 
 // ==========================================================
 // MathQuest Games — real game-genre engines. The mathematical
@@ -98,7 +99,9 @@ export function GameEngine({ resource }: { resource: Resource }) {
 
   return (
     <GameCtx.Provider value={value}>
-      <GameBody resource={resource} />
+      <PresentStage title={resource.title} buttonLabel="Full screen" defaultZoom={1.1} stageWidth={720}>
+        <GameBody resource={resource} />
+      </PresentStage>
     </GameCtx.Provider>
   );
 }
