@@ -197,6 +197,31 @@ function Frac({ n, d, className }: { n: React.ReactNode; d: React.ReactNode; cla
     </span>
   );
 }
+// Reusable challenge tasks with live ✓ feedback (PhET-style implicit guidance).
+function Challenges({ tasks }: { tasks: { label: string; done: boolean }[] }) {
+  const [on, setOn] = useState(false);
+  const [i, setI] = useState(0);
+  if (tasks.length === 0) return null;
+  const idx = i % tasks.length, t = tasks[idx];
+  return (
+    <div className="mt-4">
+      <button onClick={() => setOn((v) => !v)} aria-pressed={on}
+        className={cn("rounded-full border px-3 py-1 text-xs font-semibold transition-colors", on ? "border-accent-500 bg-accent-50 text-accent-700" : "border-navy-200 text-navy-500 hover:bg-navy-50")}>🎯 Challenge</button>
+      {on && (
+        <div className={cn("mt-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 p-3.5 transition-colors", t.done ? "border-emerald-300 bg-emerald-50/60" : "border-accent-300 bg-accent-50/40")}>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-accent-700">Challenge {idx + 1}/{tasks.length}</p>
+            <p className="text-sm font-medium text-navy-800">{t.label}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {t.done ? <Badge tone="green"><Check className="h-3.5 w-3.5" /> Solved!</Badge> : <Badge tone="grey">Try it</Badge>}
+            <Button size="sm" variant="outline" onClick={() => setI((x) => x + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ==================================================================
 // 1. TEN FRAME — modes: count | bond | combine
@@ -209,15 +234,20 @@ function TenFrameEngine({ resource }: { resource: Resource }) {
 function TenFrameMain({ resource }: { resource: Resource }) {
   const p = simPreset(resource.id);
   const bondDefault = p.tfMode === "bond";
-  const [frames, setFrames] = useState((p.tfTarget ?? 10) > 10 ? 2 : 1);
+  const baseTarget = p.tfTarget ?? 10;
+  const [frames, setFrames] = useState(1);
   const [showBond, setShowBond] = useState(bondDefault);
-  const target = frames * (p.tfTarget && p.tfTarget < 10 ? p.tfTarget : 10) / (frames || 1);
-  const total = p.tfTarget && p.tfTarget <= 10 ? p.tfTarget : frames * 10;
+  const total = baseTarget < 10 ? baseTarget : frames * 10;
   const [count, setCount] = useState(bondDefault ? 6 : 3);
   useEffect(() => { setCount((c) => Math.min(c, total)); }, [total]);
-  void target;
   const cols = 5;
   const cells = Array.from({ length: total }, (_, i) => i < count);
+  const half = Math.round(total / 2);
+  const tasks = [
+    { label: `Show exactly ${half} counters.`, done: count === half },
+    { label: `Fill the whole frame (show ${total}).`, done: count === total },
+    { label: `Show ${Math.max(1, total - 3)} — then say how many more make ${total}.`, done: count === Math.max(1, total - 3) },
+  ];
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setCount(0)}
       settings={<>
@@ -242,6 +272,7 @@ function TenFrameMain({ resource }: { resource: Resource }) {
       ) : (
         <p className="mt-5 text-center font-display text-3xl font-bold text-navy-900">{count}</p>
       )}
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -325,6 +356,12 @@ function NumberLineMain({ resource }: { resource: Resource }) {
     const r = e.currentTarget.getBoundingClientRect();
     setValue(clamp(Math.round(min + ((e.clientX - r.left) / r.width) * span), min, max));
   };
+  const mid = Math.round((min + max) / 2);
+  const tasks = [
+    { label: `Move the marker to land on ${mid}.`, done: value === mid },
+    { label: `Land on ${max} (the largest number).`, done: value === max },
+    { label: min < 0 ? `Land on ${min} (a negative number).` : `Land on ${min}.`, done: value === min },
+  ];
 
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setValue(clamp(mode === "onemore" ? 4 : 0, min, max))}
@@ -375,6 +412,7 @@ function NumberLineMain({ resource }: { resource: Resource }) {
         </div>
       )}
       {mode === "steps" && <p className="mt-2 text-center text-xs text-navy-400">Teal dots mark the numbers you land on counting in {step}s.</p>}
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -427,6 +465,12 @@ function PlaceValueMain({ resource }: { resource: Resource }) {
   useEffect(() => { if (places === "to") { setH(0); setTh(0); } if (places === "hto") setTh(0); }, [places]);
   const total = th * 1000 + h * 100 + t * 10 + o;
   const showH = places !== "to", showTh = places === "thhto";
+  const goal = places === "to" ? 47 : places === "thhto" ? 1204 : 305;
+  const tasks = [
+    { label: `Build the number ${goal}.`, done: total === goal },
+    { label: `Build a number that has 0 tens (but is not zero).`, done: t === 0 && total > 0 },
+    { label: showTh ? `Build a number greater than 1000.` : showH ? `Build a number greater than 500.` : `Build a number greater than 50.`, done: total > (showTh ? 1000 : showH ? 500 : 50) },
+  ];
   const regroup = () => {
     let nth = th, nh = h, nt = t, no = o;
     if (no >= 10) { nt += Math.floor(no / 10); no %= 10; }
@@ -459,6 +503,7 @@ function PlaceValueMain({ resource }: { resource: Resource }) {
         {showPartition ? <p className="font-display text-sm text-navy-500">{showTh ? `${th * 1000} + ` : ""}{showH ? `${h * 100} + ` : ""}{t * 10} + {o} = <span className="text-2xl font-bold text-navy-900">{total}</span></p> : <p className="font-display text-2xl font-bold text-navy-900">{total}</p>}
         <Button size="sm" variant="secondary" onClick={regroup}>Regroup</Button>
       </div>
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -469,6 +514,12 @@ function DecimalPlaceValue({ resource }: { resource: Resource }) {
   const [h, setH] = useState(0);
   const value = o + t / 10 + h / 100;
   const shaded = t * 10 + h;
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  const tasks = [
+    { label: "Build the decimal 0.50 (one half).", done: near(value, 0.5) },
+    { label: "Build the decimal 0.25 (one quarter).", done: near(value, 0.25) },
+    { label: "Build a decimal larger than one whole.", done: value > 1 },
+  ];
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => { setO(0); setT(0); setH(0); }}>
       <Intro>{p.intro ?? "Build a decimal with tenths and hundredths."}</Intro>
@@ -484,6 +535,7 @@ function DecimalPlaceValue({ resource }: { resource: Resource }) {
         <p className="text-xs text-navy-500">one whole =<br />10 tenths =<br />100 hundredths</p>
       </div>
       <p className="mt-4 flex items-center justify-center gap-1.5 font-display text-2xl font-bold text-navy-900">{o} + <Frac n={t} d={10} /> + <Frac n={h} d={100} /> = {value.toFixed(2)}</p>
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -500,6 +552,9 @@ function ArrayEngine({ resource }: { resource: Resource }) {
   const [rows, setRows] = useState(doubles ? 2 : 3);
   const [cols, setCols] = useState(4);
   useEffect(() => { setCols((c) => Math.min(c, maxSize)); if (!doubles) setRows((r) => Math.min(r, maxSize)); }, [maxSize, doubles]);
+  const tasks = doubles
+    ? [{ label: "Make double 4 (two groups of 4).", done: cols === 4 }, { label: "Make a double that equals 10.", done: 2 * cols === 10 }]
+    : [{ label: "Build an array with exactly 12 counters.", done: rows * cols === 12 }, { label: "Make a square array (same rows and columns).", done: rows === cols && rows > 1 }, { label: "Make an array that shows 3 × 5.", done: (rows === 3 && cols === 5) || (rows === 5 && cols === 3) }];
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => { setRows(doubles ? 2 : 3); setCols(4); }}
       settings={<>
@@ -523,6 +578,7 @@ function ArrayEngine({ resource }: { resource: Resource }) {
         {doubles ? <p className="font-display text-2xl font-bold text-navy-900">double {cols} = {cols} + {cols} = {2 * cols}</p>
           : <><p className="font-display text-2xl font-bold text-navy-900">{rows} × {cols} = {rows * cols}</p>{showAdd && <p className="mt-1 text-xs text-navy-500">{Array.from({ length: rows }).map(() => cols).join(" + ")} = {rows * cols}</p>}</>}
       </div>
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -759,6 +815,11 @@ function HalvesShader({ resource }: { resource: Resource }) {
         <Stepper label="Shaded parts" value={n} set={(x) => setN(clamp(x, 0, parts))} min={0} max={parts} />
         <p className="flex items-center gap-1.5 font-display text-2xl font-bold text-navy-900"><Frac n={n} d={parts} />{n === 1 && parts === 2 ? <span>— one half</span> : n === 1 && parts === 4 ? <span>— one quarter</span> : null}</p>
       </div>
+      <Challenges tasks={[
+        { label: "Shade exactly one half.", done: parts === 2 && n === 1 },
+        { label: "Shade one quarter (change to 4 parts).", done: parts === 4 && n === 1 },
+        { label: "Shade three-quarters.", done: parts === 4 && n === 3 },
+      ]} />
     </EngineCard>
   );
 }
@@ -777,6 +838,11 @@ function PercentGrid({ resource }: { resource: Resource }) {
         <div><p className="font-display text-3xl font-bold text-navy-900">{shaded}%</p><p className="text-xs text-navy-400">shaded</p></div>
         <div><p className="flex justify-center font-display text-3xl font-bold text-teal-600"><Frac n={shaded} d={100} /></p><p className="text-xs text-navy-400">as a fraction</p></div>
       </div>
+      <Challenges tasks={[
+        { label: "Shade exactly 25% (one quarter).", done: shaded === 25 },
+        { label: "Shade one half (50%).", done: shaded === 50 },
+        { label: "Shade the whole grid (100%).", done: shaded === 100 },
+      ]} />
     </EngineCard>
   );
 }
@@ -821,6 +887,11 @@ function ClockEngine({ resource }: { resource: Resource }) {
     if (min < 30) return `${min} minutes past ${names[h12]}`;
     return `${60 - min} minutes to ${names[(h12 + 1) % 12]}`;
   })();
+  const tasks = [
+    { label: "Show 6 o'clock.", done: hour === 6 && min === 0 },
+    { label: "Show half past 9.", done: hour === 9 && min === 30 },
+    { label: "Show 3 o'clock.", done: hour === 3 && min === 0 },
+  ];
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => { setHour(3); setMin(0); }}
       settings={<>
@@ -850,6 +921,7 @@ function ClockEngine({ resource }: { resource: Resource }) {
           </div>
         </div>
       </div>
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -875,6 +947,10 @@ function CoordinateEngine({ resource }: { resource: Resource }) {
     const gy = Math.round(lo + (size - pad - ((e.clientY - r.top) / r.height) * size) / (size - 2 * pad) * span);
     return [clamp(gx, lo, hi), clamp(gy, lo, hi)];
   };
+  const has = (x: number, y: number) => pts.some(([px, py]) => px === x && py === y);
+  const tasks = quad === 4
+    ? [{ label: "Plot the point (−2, 3).", done: has(-2, 3) }, { label: "Plot the point (3, −1).", done: has(3, -1) }, { label: "Plot a point on the y-axis (x = 0).", done: pts.some(([x]) => x === 0) }]
+    : [{ label: "Plot the point (3, 2).", done: has(3, 2) }, { label: "Plot the point (0, 4).", done: has(0, 4) }, { label: "Plot three points in a straight line.", done: pts.length >= 3 }];
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setPts([])}
       settings={<>
@@ -907,6 +983,7 @@ function CoordinateEngine({ resource }: { resource: Resource }) {
           <div className="mt-2 flex max-w-[160px] flex-wrap justify-center gap-1.5">{pts.length === 0 ? <span className="text-xs text-navy-400">Tap the grid…</span> : pts.map(([x, y], i) => <Badge key={i} tone="navy">({x}, {y})</Badge>)}</div>
         </div>
       </div>
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -932,6 +1009,12 @@ function BarChartEngine({ resource }: { resource: Resource }) {
   const modeVal = Number(Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]);
   const range = Math.max(...view) - Math.min(...view);
   const pictogram = mode === "pictogram";
+  const maxOfView = Math.max(...view);
+  const tasks = [
+    { label: `Make ${labels[1]} the tallest bar on its own.`, done: view[1] === maxOfView && view.filter((x) => x === maxOfView).length === 1 },
+    { label: "Make every bar the same height (range = 0).", done: range === 0 && maxOfView > 0 },
+    ...(showStats && !pictogram ? [{ label: "Change the data so the mode is 5.", done: modeVal === 5 }] : []),
+  ];
   return (
     <EngineCard hint={hintFor(resource)} onReset={() => setData([3, 5, 2, 6, 4, 3])}
       settings={<>
@@ -964,6 +1047,7 @@ function BarChartEngine({ resource }: { resource: Resource }) {
           {[["Mean", mean.toFixed(1)], ["Median", `${median}`], ["Mode", `${modeVal}`], ["Range", `${range}`]].map(([k, v]) => <div key={k} className="rounded-xl bg-surface-soft p-3 text-center"><p className="font-display text-xl font-bold text-navy-900">{v}</p><p className="text-xs text-navy-400">{k}</p></div>)}
         </div>
       )}
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }
@@ -1173,6 +1257,11 @@ function RatioEngine({ resource }: { resource: Resource }) {
         <div className="flex flex-wrap gap-1.5">{Array.from({ length: b * k }).map((_, i) => <span key={i} className="h-6 w-6 rounded-full bg-accent-400" />)}</div>
       </div>
       <div className="mt-4 text-center"><p className="font-display text-2xl font-bold text-navy-900">{a * k} : {b * k} <span className="text-base font-medium text-navy-400">= {a} : {b}</span></p>{showProp && <p className="mt-1 flex items-center justify-center gap-1 text-xs text-navy-500">Part A is <Frac n={a} d={whole} /> of the whole (proportion).</p>}</div>
+      <Challenges tasks={[
+        { label: "Scale the ratio so Part A shows 6 counters.", done: a * k === 6 },
+        { label: "Make the two parts equal (ratio 1 : 1).", done: a === b },
+        { label: "Make an equivalent ratio to 2 : 3 (scaled up).", done: a === 2 && b === 3 && k > 1 },
+      ]} />
     </EngineCard>
   );
 }
@@ -1275,6 +1364,11 @@ function CompareEngine({ resource }: { resource: Resource }) {
       )}
       <div className="mt-3 grid gap-2 sm:grid-cols-2"><Stepper label="Group A" value={a} set={setA} min={0} max={maxN} /><Stepper label="Group B" value={b} set={setB} min={0} max={maxN} /></div>
       <div className="mt-4 text-center"><p className="font-display text-2xl font-bold text-navy-900">{a} {sym} {b}</p><p className="text-sm font-medium text-teal-700">{word}</p></div>
+      <Challenges tasks={[
+        { label: "Make Group A have more than Group B.", done: a > b },
+        { label: "Make the two groups equal.", done: a === b },
+        { label: "Make Group A have exactly 2 more than B.", done: a - b === 2 },
+      ]} />
     </EngineCard>
   );
 }
