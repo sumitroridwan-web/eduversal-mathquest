@@ -1,142 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { RotateCcw, Lightbulb, Check, X, ChevronLeft, ChevronRight, Bookmark, Trophy } from "lucide-react";
+import { Check, X, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
 import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { ProgressBar } from "@/components/ui/Progress";
 import { useToasts } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import { SimulationEngine } from "./simEngines";
+import { GameEngine } from "./gameEngines";
 
 /**
  * The activity player adapts to the resource type: bespoke interactive
- * manipulatives for simulations, a quiz for games, and a paged reader with
- * checkpoints for books. Every control works (no dead buttons).
+ * manipulatives for simulations, a real game-genre engine for games, and a
+ * paged reader with checkpoints for books. Every control works (no dead buttons).
  */
 export function ActivityPlayer({ resource }: { resource: Resource }) {
   if (resource.type === "book") return <BookReader resource={resource} />;
   if (resource.type === "simulation") return <SimulationEngine resource={resource} />;
-  return <QuizGame resource={resource} />;
-}
-
-// ---------- Game: simple addition/number quiz ----------
-function makeQuestions(seed: string) {
-  // deterministic small question set derived from the id length
-  const base = seed.length;
-  return [
-    { q: `${(base % 7) + 3} + ${(base % 5) + 2} = ?`, a: (base % 7) + 3 + ((base % 5) + 2) },
-    { q: `${(base % 6) + 5} + ${(base % 4) + 1} = ?`, a: (base % 6) + 5 + ((base % 4) + 1) },
-    { q: `${(base % 8) + 2} + ${(base % 3) + 4} = ?`, a: (base % 8) + 2 + ((base % 3) + 4) },
-    { q: `${(base % 5) + 6} + ${(base % 6) + 2} = ?`, a: (base % 5) + 6 + ((base % 6) + 2) },
-  ];
-}
-
-function QuizGame({ resource }: { resource: Resource }) {
-  const notify = useToasts((s) => s.notify);
-  const questions = makeQuestions(resource.id);
-  const [index, setIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [showHint, setShowHint] = useState(false);
-  const [feedback, setFeedback] = useState<null | "correct" | "wrong">(null);
-  const [done, setDone] = useState(false);
-
-  const current = questions[index];
-  const options = buildOptions(current.a, resource.id + index);
-
-  const answer = (value: number) => {
-    if (feedback) return;
-    const correct = value === current.a;
-    setFeedback(correct ? "correct" : "wrong");
-    if (correct) setScore((s) => s + 1);
-    setTimeout(() => {
-      setFeedback(null);
-      setShowHint(false);
-      if (index + 1 >= questions.length) {
-        setDone(true);
-        notify({ variant: "success", title: "Quest complete!", description: `You scored ${score + (correct ? 1 : 0)}/${questions.length}.` });
-      } else {
-        setIndex((i) => i + 1);
-      }
-    }, 900);
-  };
-
-  const restart = () => { setIndex(0); setScore(0); setDone(false); setFeedback(null); setShowHint(false); };
-
-  if (done) {
-    const pct = Math.round((score / questions.length) * 100);
-    return (
-      <div className="flex flex-col items-center rounded-2xl bg-gradient-to-br from-navy-900 to-teal-800 p-8 text-center text-white">
-        <Trophy className="h-14 w-14 text-accent-400" />
-        <h3 className="mt-4 font-display text-2xl font-bold">Quest complete!</h3>
-        <p className="mt-1 text-white/80">You scored {score} out of {questions.length} ({pct}%)</p>
-        <div className="mt-3 text-4xl">{pct >= 75 ? "🌟🌟🌟" : pct >= 50 ? "🌟🌟" : "🌟"}</div>
-        <Button variant="accent" className="mt-6" onClick={restart}>
-          <RotateCcw className="h-4 w-4" /> Play again
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl border border-navy-100 bg-white p-6 shadow-card">
-      <div className="mb-4 flex items-center justify-between">
-        <Badge tone="teal">Question {index + 1} of {questions.length}</Badge>
-        <span className="text-sm font-semibold text-navy-600">Score: {score}</span>
-      </div>
-      <ProgressBar value={((index) / questions.length) * 100} className="mb-6" tone="accent" />
-      <div className="rounded-2xl bg-surface-soft py-10 text-center">
-        <p className="font-display text-4xl font-bold text-navy-900">{current.q}</p>
-      </div>
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        {options.map((opt) => (
-          <button
-            key={opt}
-            onClick={() => answer(opt)}
-            disabled={Boolean(feedback)}
-            className={cn(
-              "rounded-xl border-2 py-4 text-xl font-bold transition-colors",
-              feedback && opt === current.a
-                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                : feedback === "wrong" && "border-navy-100 opacity-60",
-              !feedback && "border-navy-200 text-navy-800 hover:border-teal-400 hover:bg-teal-50",
-            )}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-      <div className="mt-5 flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => setShowHint((v) => !v)}>
-          <Lightbulb className="h-4 w-4" /> Hint
-        </Button>
-        {feedback && (
-          <span className={cn("flex items-center gap-1 text-sm font-semibold", feedback === "correct" ? "text-emerald-600" : "text-red-600")}>
-            {feedback === "correct" ? <><Check className="h-4 w-4" /> Correct!</> : <><X className="h-4 w-4" /> Try the next one</>}
-          </span>
-        )}
-      </div>
-      {showHint && (
-        <p className="mt-3 rounded-xl bg-accent-50 p-3 text-sm text-navy-700">
-          💡 {resource.thinkPrompt ?? "Try counting on from the bigger number, or make a ten first."}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function buildOptions(answer: number, seed: string): number[] {
-  const s = seed.length;
-  const set = new Set<number>([answer]);
-  const deltas = [1, 2, -1, 3, -2];
-  let i = 0;
-  while (set.size < 4 && i < deltas.length) {
-    const v = answer + deltas[(s + i) % deltas.length];
-    if (v > 0) set.add(v);
-    i++;
-  }
-  return Array.from(set).sort((a, b) => a - b);
+  return <GameEngine resource={resource} />;
 }
 
 // ---------- Book: reader with checkpoints ----------
