@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { SimulationEngine } from "./simEngines";
 import { GameEngine } from "./gameEngines";
 import { PresentStage } from "./PresentStage";
+import { StoryBookReader } from "./StoryBookReader";
+import { getStorybook } from "@/data/storybooks";
 
 /**
  * The activity player adapts to the resource type: bespoke interactive
@@ -17,7 +19,17 @@ import { PresentStage } from "./PresentStage";
  * paged reader with checkpoints for books. Every control works (no dead buttons).
  */
 export function ActivityPlayer({ resource }: { resource: Resource }) {
-  if (resource.type === "book") return <BookReader resource={resource} />;
+  if (resource.type === "book") {
+    const storybook = getStorybook(resource.id);
+    if (storybook) {
+      return (
+        <PresentStage title={resource.title} buttonLabel="Read full screen" defaultZoom={1} stageWidth={900}>
+          <StoryBookReader book={storybook} />
+        </PresentStage>
+      );
+    }
+    return <BookReader resource={resource} />;
+  }
   if (resource.type === "simulation") return <SimulationEngine resource={resource} />;
   return <GameEngine resource={resource} />;
 }

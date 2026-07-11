@@ -4,6 +4,7 @@ import { craFor, type CRA } from "@/lib/cra";
 import { simPreset } from "@/config/simPresets";
 import { GameCover } from "./GameCover";
 import { SimCover } from "./SimCover";
+import { BookCover } from "./BookCover";
 
 // ==========================================================
 // ResourceCover — CRA-graded, per-topic scene illustrations.
@@ -320,6 +321,7 @@ export function ResourceCover({
   // thumbnail matches the activity it opens.
   if (resource?.type === "game") return <GameCover resource={resource} className={className} />;
   if (resource?.type === "simulation") return <SimCover resource={resource} className={className} />;
+  if (resource?.type === "book") return <BookCover resource={resource} className={className} />;
   const theme = resource ? themeFor(resource) : "count";
   const cra: CRA = resource ? craFor(resource) : "pictorial";
   const s = resource ? seedNum(resource.id) : 0;
