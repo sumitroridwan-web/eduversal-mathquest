@@ -91,8 +91,20 @@ function pie(cx: number, cy: number, r: number, d: number, filled: number, fill 
   return Array.from({ length: d }).map((_, i) => { const a0 = (i / d) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / d) * 2 * Math.PI - Math.PI / 2; const p = (a: number) => [cx + r * Math.cos(a), cy + r * Math.sin(a)]; const [x0, y0] = p(a0), [x1, y1] = p(a1); const large = a1 - a0 > Math.PI ? 1 : 0; return <path key={i} d={`M${cx} ${cy} L${x0} ${y0} A${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`} fill={i < filled ? fill : W} opacity={i < filled ? 1 : 0.85} stroke={W} strokeWidth={2} />; });
 }
 
+// stacked fraction for SVG (numerator over bar over denominator)
+function FracSVG({ x, y, n, d, s = 30, fill = W }: { x: number; y: number; n: number | string; d: number | string; s?: number; fill?: string }) {
+  const w = Math.max(String(n).length, String(d).length) * s * 0.4 + 4;
+  return (
+    <g>
+      <text x={x} y={y - s * 0.42} fontSize={s} fontWeight={800} fill={fill} textAnchor="middle" dominantBaseline="central" fontFamily={FONT}>{n}</text>
+      <line x1={x - w / 2} y1={y} x2={x + w / 2} y2={y} stroke={fill} strokeWidth={Math.max(2, s * 0.08)} strokeLinecap="round" />
+      <text x={x} y={y + s * 0.5} fontSize={s} fontWeight={800} fill={fill} textAnchor="middle" dominantBaseline="central" fontFamily={FONT}>{d}</text>
+    </g>
+  );
+}
+
 // ---- scene renderer ----
-function Scene({ theme, cra, seed }: { theme: string; cra: CRA; seed: number }) {
+function Scene({ theme, cra, seed, pid }: { theme: string; cra: CRA; seed: number; pid: string }) {
   const cx = 160, cy = 94;
   switch (theme) {
     case "count": {
@@ -102,8 +114,9 @@ function Scene({ theme, cra, seed }: { theme: string; cra: CRA; seed: number }) 
       return <g>{units("apple", n, cx, cy, 30, 11, cra)}</g>;
     }
     case "bond": {
-      if (cra === "abstract") return <Num x={cx} y={cy} t="6 + 4 = 10" s={30} />;
-      return <g>{tenFrame(6, cx, cy - 8)}<Num x={cx} y={cy + 34} t="? + ? = 10" s={16} /></g>;
+      const filled = 4 + (seed % 5);
+      if (cra === "abstract") return <Num x={cx} y={cy} t={`${filled} + ${10 - filled} = 10`} s={28} />;
+      return <g>{tenFrame(filled, cx, cy - 8)}<Num x={cx} y={cy + 34} t={`${filled} + ? = 10`} s={16} /></g>;
     }
     case "addition": {
       const a = 2 + (seed % 3), b = 2 + ((seed >> 2) % 3);
@@ -132,22 +145,25 @@ function Scene({ theme, cra, seed }: { theme: string; cra: CRA; seed: number }) 
     case "onemore":
       return <g>{units("apple", 4, cx, cy, 24, 10, cra)}<path d={`M${cx + 62} ${cy} h18`} stroke={ACC} strokeWidth={3} strokeLinecap="round" /><path d={`M${cx + 80} ${cy} l-6 -5 v10 z`} fill={ACC} /><Num x={cx + 92} y={cy} t="+1" s={16} /></g>;
     case "steps": {
-      const line = <line x1={70} y1={cy + 20} x2={250} y2={cy + 20} stroke={W} strokeWidth={2.5} strokeLinecap="round" />;
-      const dots = [0, 1, 2, 3, 4].map((k) => <circle key={k} cx={78 + k * 40} cy={cy + 20} r={5} fill={ACC} stroke={W} strokeWidth={1.5} />);
-      const arcs = [0, 1, 2].map((k) => <path key={k} d={`M${78 + k * 40} ${cy + 16} Q${98 + k * 40} ${cy - 18} ${118 + k * 40} ${cy + 16}`} fill="none" stroke={W} strokeWidth={2} />);
+      const n = 4 + (seed % 2), step = [2, 5, 10][seed % 3], gap = 170 / n;
+      const line = <line x1={70} y1={cy + 18} x2={70 + gap * n + 8} y2={cy + 18} stroke={W} strokeWidth={2.5} strokeLinecap="round" />;
+      const dots = Array.from({ length: n + 1 }).map((_, k) => <g key={k}><circle cx={78 + k * gap} cy={cy + 18} r={5} fill={ACC} stroke={W} strokeWidth={1.5} /><text x={78 + k * gap} y={cy + 34} fontSize={9} textAnchor="middle" fill={W} fontWeight={700}>{k * step}</text></g>);
+      const arcs = Array.from({ length: n }).map((_, k) => <path key={k} d={`M${78 + k * gap} ${cy + 14} Q${78 + (k + 0.5) * gap} ${cy - 16} ${78 + (k + 1) * gap} ${cy + 14}`} fill="none" stroke={W} strokeWidth={2} />);
       return <g>{line}{dots}{arcs}</g>;
     }
     case "numberline": {
+      const mk = 1 + (seed % 5);
       const line = <line x1={70} y1={cy} x2={250} y2={cy} stroke={W} strokeWidth={2.5} strokeLinecap="round" />;
       const ticks = [0, 1, 2, 3, 4, 5].map((k) => <g key={k}><line x1={78 + k * 34} y1={cy - 6} x2={78 + k * 34} y2={cy + 6} stroke={W} strokeWidth={2} />{cra !== "concrete" && <text x={78 + k * 34} y={cy + 20} fontSize={11} textAnchor="middle" fill={W} fontWeight={700}>{k}</text>}</g>);
-      return <g>{line}{ticks}<circle cx={78 + 3 * 34} cy={cy} r={7} fill={ACC} stroke={W} strokeWidth={2} /></g>;
+      return <g>{line}{ticks}<circle cx={78 + mk * 34} cy={cy} r={7} fill={ACC} stroke={W} strokeWidth={2} /><text x={78 + mk * 34} y={cy - 14} fontSize={13} textAnchor="middle" fill={W} fontWeight={800} fontFamily={FONT}>{mk}</text></g>;
     }
     case "placevalue": {
-      if (cra === "abstract") return <g><Num x={cx} y={cy - 8} t="342" s={40} /><Num x={cx} y={cy + 26} t="300 + 40 + 2" s={15} /></g>;
+      const tn = 1 + (seed % 5), on = 1 + ((seed >> 3) % 6), num = 100 + tn * 10 + on;
+      if (cra === "abstract") return <g><Num x={cx} y={cy - 8} t={`${num}`} s={40} /><Num x={cx} y={cy + 26} t={`100 + ${tn * 10} + ${on}`} s={15} /></g>;
       return <g>
-        <g stroke={W} strokeWidth={1} strokeOpacity={0.85}><rect x={cx - 74} y={cy - 26} width={52} height={52} rx={4} fill={W} opacity={0.85} />{[1, 2, 3, 4].map((i) => <path key={`h${i}`} d={`M${cx - 74 + i * 10.4} ${cy - 26} v52`} />)}{[1, 2, 3, 4].map((i) => <path key={`v${i}`} d={`M${cx - 74} ${cy - 26 + i * 10.4} h52`} />)}</g>
-        {[0, 1, 2, 3].map((i) => <rect key={i} x={cx - 8 + i * 8} y={cy - 26} width={6} height={52} rx={2} fill={TEAL} stroke={W} />)}
-        {[0, 1].map((i) => <rect key={i} x={cx + 40} y={cy - 26 + i * 16} width={12} height={12} rx={2} fill={ACC} stroke={W} />)}
+        <g stroke={W} strokeWidth={1} strokeOpacity={0.85}><rect x={cx - 82} y={cy - 26} width={52} height={52} rx={4} fill={W} opacity={0.85} />{[1, 2, 3, 4].map((i) => <path key={`h${i}`} d={`M${cx - 82 + i * 10.4} ${cy - 26} v52`} />)}{[1, 2, 3, 4].map((i) => <path key={`v${i}`} d={`M${cx - 82} ${cy - 26 + i * 10.4} h52`} />)}</g>
+        {Array.from({ length: tn }).map((_, i) => <rect key={i} x={cx - 18 + i * 8} y={cy - 26} width={6} height={52} rx={2} fill={TEAL} stroke={W} />)}
+        {Array.from({ length: on }).map((_, i) => <rect key={i} x={cx + 40 + (i % 2) * 16} y={cy - 26 + Math.floor(i / 2) * 16} width={12} height={12} rx={2} fill={ACC} stroke={W} />)}
       </g>;
     }
     case "decimal":
@@ -158,63 +174,98 @@ function Scene({ theme, cra, seed }: { theme: string; cra: CRA; seed: number }) 
       return <g>{Array.from({ length: rows }).map((_, r) => Array.from({ length: cols }).map((_, c) => <Obj key={`${r}-${c}`} k={cra === "concrete" ? "apple" : "dot"} x={cx - (cols - 1) * 11 + c * 22} y={cy - (rows - 1) * 11 + r * 22} s={8} />))}</g>;
     }
     case "fraction": {
-      const d = 4, f = 3;
-      if (cra === "abstract") return <Num x={cx} y={cy} t={`${f}/${d}`} s={46} />;
-      return <g><circle cx={cx} cy={cy} r={40} fill={W} opacity={0.25} />{pie(cx, cy, 38, d, f)}</g>;
+      const d = [3, 4, 5, 6, 8][seed % 5];
+      const fn = 1 + ((seed >> 3) % (d - 1));
+      if (cra === "abstract") return <FracSVG x={cx} y={cy} n={fn} d={d} s={46} />;
+      if (cra === "pictorial") return <g>{Array.from({ length: d }).map((_, i) => <rect key={i} x={cx - 70 + i * (140 / d)} y={cy - 15} width={140 / d - 4} height={30} rx={4} fill={i < fn ? ACC : W} opacity={i < fn ? 1 : 0.3} stroke={W} strokeWidth={1.5} />)}</g>;
+      return <g><circle cx={cx} cy={cy} r={40} fill={W} opacity={0.25} />{pie(cx, cy, 38, d, fn)}</g>;
     }
-    case "halves":
-      if (cra === "abstract") return <Num x={cx} y={cy} t="1/2" s={46} />;
-      return <g><circle cx={cx} cy={cy} r={40} fill={W} opacity={0.25} />{pie(cx, cy, 38, 2, 1, TEAL)}</g>;
-    case "equivalent":
-      if (cra === "abstract") return <Num x={cx} y={cy} t="1/2 = 2/4" s={30} />;
+    case "halves": {
+      const m3 = seed % 3, col = seed % 2 ? TEAL : ACC;
+      if (cra === "abstract") return <FracSVG x={cx} y={cy} n={1} d={2} s={48} />;
+      if (m3 === 1) return <g>{[0, 1].map((i) => <rect key={i} x={cx - 42 + i * 42} y={cy - 22} width={40} height={44} rx={5} fill={i < 1 ? col : W} opacity={i < 1 ? 1 : 0.3} stroke={W} strokeWidth={2} />)}</g>;
+      if (m3 === 2) return <g><circle cx={cx} cy={cy} r={40} fill={W} opacity={0.25} />{pie(cx, cy, 38, 4, 2, col)}</g>;
+      return <g><circle cx={cx} cy={cy} r={40} fill={W} opacity={0.25} />{pie(cx, cy, 38, 2, 1, col)}</g>;
+    }
+    case "equivalent": {
+      const eq = [[1, 2, 2, 4], [1, 3, 2, 6], [2, 3, 4, 6], [1, 4, 2, 8], [3, 4, 6, 8]][seed % 5];
+      const [a1, b1, a2, b2] = eq;
+      if (cra === "abstract") return <g><FracSVG x={cx - 46} y={cy} n={a1} d={b1} s={30} /><Num x={cx} y={cy} t="=" s={24} /><FracSVG x={cx + 46} y={cy} n={a2} d={b2} s={30} /></g>;
       return <g>
-        <g transform={`translate(${cx - 66} ${cy - 12})`}><rect x={0} y={0} width={52} height={22} rx={4} fill={W} opacity={0.3} /><rect x={0} y={0} width={26} height={22} rx={4} fill={TEAL} /></g>
+        <g transform={`translate(${cx - 66} ${cy - 12})`}>{Array.from({ length: b1 }).map((_, i) => <rect key={i} x={i * (52 / b1)} y={0} width={52 / b1 - 2} height={22} rx={3} fill={i < a1 ? TEAL : W} opacity={i < a1 ? 1 : 0.3} />)}</g>
         <Num x={cx} y={cy} t="=" s={22} />
-        <g transform={`translate(${cx + 14} ${cy - 12})`}>{[0, 1, 2, 3].map((i) => <rect key={i} x={i * 13} y={0} width={12} height={22} rx={3} fill={i < 2 ? ACC : W} opacity={i < 2 ? 1 : 0.3} />)}</g>
+        <g transform={`translate(${cx + 14} ${cy - 12})`}>{Array.from({ length: b2 }).map((_, i) => <rect key={i} x={i * (52 / b2)} y={0} width={52 / b2 - 2} height={22} rx={3} fill={i < a2 ? ACC : W} opacity={i < a2 ? 1 : 0.3} />)}</g>
       </g>;
+    }
     case "percent":
       return <g><g>{Array.from({ length: 100 }).map((_, i) => { const col = i % 10, row = Math.floor(i / 10); return <rect key={i} x={cx - 70 + col * 8} y={cy - 40 + row * 8} width={7} height={7} fill={i % 10 < 5 ? TEAL : W} opacity={i % 10 < 5 ? 1 : 0.55} />; })}</g><Num x={cx + 44} y={cy} t="50%" s={24} /></g>;
-    case "money":
-      if (cra === "abstract") return <Num x={cx} y={cy} t="£1.20" s={38} />;
-      return <g><Obj k="coin" x={cx - 26} y={cy} s={18} /><Obj k="coin" x={cx} y={cy - 6} s={18} /><Obj k="coin" x={cx + 26} y={cy} s={18} /></g>;
+    case "money": {
+      const sets = [[10, 5, 2], [20, 10], [5, 5, 2], [50, 20, 10], [10, 10, 5], [20, 5, 2]][seed % 6];
+      const amt = sets.reduce((a, b) => a + b, 0);
+      if (cra === "abstract") return <Num x={cx} y={cy} t={amt >= 100 ? `£${(amt / 100).toFixed(2)}` : `${amt}p`} s={34} />;
+      return <g>{sets.map((v, i) => <Obj key={i} k="coin" x={cx - (sets.length - 1) * 14 + i * 28} y={cy - (i % 2) * 6} s={17} />)}</g>;
+    }
     case "clock": {
-      const r = 42;
-      if (cra === "abstract") return <g><rect x={cx - 46} y={cy - 22} width={92} height={44} rx={8} fill={NAVY} opacity={0.35} /><Num x={cx} y={cy} t="3:00" s={30} /></g>;
-      return <g><circle cx={cx} cy={cy} r={r} fill={W} opacity={0.92} stroke={W} strokeWidth={2} />{[0, 3, 6, 9].map((i) => { const a = (i / 12) * 2 * Math.PI - Math.PI / 2; return <circle key={i} cx={cx + (r - 8) * Math.cos(a)} cy={cy + (r - 8) * Math.sin(a)} r={2} fill={NAVY} />; })}<line x1={cx} y1={cy} x2={cx} y2={cy - 24} stroke={NAVY} strokeWidth={3.5} strokeLinecap="round" /><line x1={cx} y1={cy} x2={cx + 20} y2={cy + 8} stroke={ACCD} strokeWidth={3.5} strokeLinecap="round" /><circle cx={cx} cy={cy} r={3.5} fill={NAVY} /></g>;
+      const r = 42, hr = 1 + (seed % 12), mn = [0, 15, 30, 45][seed % 4];
+      const ha = ((hr % 12) * 30 + mn * 0.5 - 90) * Math.PI / 180, ma = (mn * 6 - 90) * Math.PI / 180;
+      if (cra === "abstract") return <g><rect x={cx - 46} y={cy - 22} width={92} height={44} rx={8} fill={NAVY} opacity={0.35} /><Num x={cx} y={cy} t={`${hr}:${String(mn).padStart(2, "0")}`} s={28} /></g>;
+      return <g><circle cx={cx} cy={cy} r={r} fill={W} opacity={0.92} stroke={W} strokeWidth={2} />{[0, 3, 6, 9].map((i) => { const a = (i / 12) * 2 * Math.PI - Math.PI / 2; return <circle key={i} cx={cx + (r - 8) * Math.cos(a)} cy={cy + (r - 8) * Math.sin(a)} r={2} fill={NAVY} />; })}<line x1={cx} y1={cy} x2={cx + (r - 24) * Math.cos(ha)} y2={cy + (r - 24) * Math.sin(ha)} stroke={NAVY} strokeWidth={3.5} strokeLinecap="round" /><line x1={cx} y1={cy} x2={cx + (r - 12) * Math.cos(ma)} y2={cy + (r - 12) * Math.sin(ma)} stroke={ACCD} strokeWidth={3} strokeLinecap="round" /><circle cx={cx} cy={cy} r={3.5} fill={NAVY} /></g>;
     }
     case "coordinate": {
       const o = cx - 46, b = cy + 40, st = 18;
-      return <g><g stroke={W} strokeOpacity={0.35} strokeWidth={1}>{[0, 1, 2, 3, 4, 5].map((i) => <path key={`v${i}`} d={`M${o + i * st} ${b} v${-5 * st}`} />)}{[0, 1, 2, 3, 4, 5].map((i) => <path key={`h${i}`} d={`M${o} ${b - i * st} h${5 * st}`} />)}</g><path d={`M${o} ${b - 5 * st} v${5 * st} h${5 * st}`} fill="none" stroke={W} strokeWidth={2.5} strokeLinecap="round" /><polyline points={`${o + st},${b - st} ${o + 3 * st},${b - 3 * st} ${o + 4 * st},${b - 2 * st}`} fill="none" stroke={ACC} strokeWidth={2.5} />{[[1, 1], [3, 3], [4, 2]].map(([x, y], i) => <circle key={i} cx={o + x * st} cy={b - y * st} r={4.5} fill={ACC} stroke={W} strokeWidth={1.5} />)}</g>;
+      const pts = [[1 + seed % 2, 1 + seed % 3], [2 + seed % 2, 3 + (seed >> 2) % 2], [4, 2 + seed % 3]];
+      return <g><g stroke={W} strokeOpacity={0.35} strokeWidth={1}>{[0, 1, 2, 3, 4, 5].map((i) => <path key={`v${i}`} d={`M${o + i * st} ${b} v${-5 * st}`} />)}{[0, 1, 2, 3, 4, 5].map((i) => <path key={`h${i}`} d={`M${o} ${b - i * st} h${5 * st}`} />)}</g><path d={`M${o} ${b - 5 * st} v${5 * st} h${5 * st}`} fill="none" stroke={W} strokeWidth={2.5} strokeLinecap="round" /><polyline points={pts.map(([x, y]) => `${o + x * st},${b - y * st}`).join(" ")} fill="none" stroke={ACC} strokeWidth={2.5} />{pts.map(([x, y], i) => <circle key={i} cx={o + x * st} cy={b - y * st} r={4.5} fill={ACC} stroke={W} strokeWidth={1.5} />)}</g>;
     }
     case "spinner": {
       const r = 40, cols = [ACC, TEAL, "#6366f1", "#f43f5e"];
       return <g>{cols.map((col, i) => { const a0 = (i / 4) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / 4) * 2 * Math.PI - Math.PI / 2; const p = (a: number) => [cx + r * Math.cos(a), cy + r * Math.sin(a)]; const [x0, y0] = p(a0), [x1, y1] = p(a1); return <path key={i} d={`M${cx} ${cy} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`} fill={col} stroke={W} strokeWidth={1.5} />; })}<circle cx={cx} cy={cy} r={6} fill={NAVY} /><path d={`M${cx} ${cy - r - 8} l6 12 h-12 z`} fill={NAVY} /></g>;
     }
-    case "symmetry":
-      return <g><g><ellipse cx={cx - 18} cy={cy - 8} rx={16} ry={12} fill={ACC} stroke={W} strokeWidth={2} /><ellipse cx={cx - 14} cy={cy + 14} rx={11} ry={9} fill={ACC} stroke={W} strokeWidth={2} /></g><g><ellipse cx={cx + 18} cy={cy - 8} rx={16} ry={12} fill={ACCD} stroke={W} strokeWidth={2} /><ellipse cx={cx + 14} cy={cy + 14} rx={11} ry={9} fill={ACCD} stroke={W} strokeWidth={2} /></g><path d={`M${cx} ${cy - 30} v60`} stroke={W} strokeWidth={2} strokeDasharray="5 5" /></g>;
-    case "shape":
-      return <g><circle cx={cx - 40} cy={cy} r={20} fill={TEAL} stroke={W} strokeWidth={2.5} /><path d={`M${cx} ${cy + 20} l20 -38 l20 38 z`} fill={ACC} stroke={W} strokeWidth={2.5} /><rect x={cx - 18} y={cy - 18} width={36} height={36} rx={4} fill={W} opacity={0.9} stroke={W} strokeWidth={2.5} /></g>;
+    case "symmetry": {
+      const wl = [ACC, TEAL, ROSE][seed % 3], wr = [ACCD, "#0d9488", "#f43f5e"][(seed >> 2) % 3];
+      return <g><g><ellipse cx={cx - 18} cy={cy - 8} rx={16} ry={12} fill={wl} stroke={W} strokeWidth={2} /><ellipse cx={cx - 14} cy={cy + 14} rx={11} ry={9} fill={wl} stroke={W} strokeWidth={2} /></g><g><ellipse cx={cx + 18} cy={cy - 8} rx={16} ry={12} fill={wr} stroke={W} strokeWidth={2} /><ellipse cx={cx + 14} cy={cy + 14} rx={11} ry={9} fill={wr} stroke={W} strokeWidth={2} /></g><path d={`M${cx} ${cy - 30} v60`} stroke={W} strokeWidth={2} strokeDasharray="5 5" /></g>;
+    }
+    case "shape": {
+      const c1 = [TEAL, ROSE, "#6366f1"][seed % 3], c2 = [ACC, TEAL, ACCD][(seed >> 2) % 3], extra = seed % 2;
+      return <g><circle cx={cx - 42} cy={cy} r={19} fill={c1} stroke={W} strokeWidth={2.5} /><path d={`M${cx} ${cy + 20} l20 -38 l20 38 z`} fill={c2} stroke={W} strokeWidth={2.5} /><rect x={cx - 18} y={cy - 18} width={36} height={36} rx={4} fill={W} opacity={0.9} stroke={W} strokeWidth={2.5} />{extra ? <path transform={`translate(${cx + 54} ${cy - 22}) scale(1.4)`} d="M0 -9 L2.6 -2.8 L9 -2.8 L3.9 1.1 L5.6 7.3 L0 3.6 L-5.6 7.3 L-3.9 1.1 L-9 -2.8 L-2.6 -2.8 Z" fill={ACC} stroke={W} strokeWidth={0.8} /> : null}</g>;
+    }
     case "sort":
       return <g><ellipse cx={cx - 42} cy={cy} rx={40} ry={30} fill="none" stroke={W} strokeWidth={2} strokeOpacity={0.6} /><ellipse cx={cx + 42} cy={cy} rx={40} ry={30} fill="none" stroke={W} strokeWidth={2} strokeOpacity={0.6} /><circle cx={cx - 50} cy={cy} r={12} fill={TEAL} stroke={W} strokeWidth={2} /><circle cx={cx - 30} cy={cy + 8} r={10} fill={TEAL} stroke={W} strokeWidth={2} /><rect x={cx + 30} y={cy - 12} width={22} height={22} rx={3} fill={ACC} stroke={W} strokeWidth={2} /><path d={`M${cx + 44} ${cy + 14} l12 -22 l12 22 z`} fill={ACC} stroke={W} strokeWidth={2} transform={`translate(-18 0)`} /></g>;
     case "pattern": {
-      const seq = cra === "abstract" ? ["A", "B", "A", "B", "A"] : null;
-      const cols = [ACC, TEAL, ACC, TEAL, ACC];
-      if (seq) return <g>{seq.map((t, i) => <Num key={i} x={cx - 64 + i * 32} y={cy} t={t} s={26} />)}</g>;
-      return <g>{cols.map((col, i) => i % 2 === 0 ? <circle key={i} cx={cx - 64 + i * 32} cy={cy} r={13} fill={col} stroke={W} strokeWidth={2} /> : <rect key={i} x={cx - 76 + i * 32} y={cy - 12} width={24} height={24} rx={4} fill={col} stroke={W} strokeWidth={2} />)}</g>;
+      const pr = simPreset(pid);
+      const unit = pr.ptUnit ? (pr.ptUnit === "AB" ? 2 : 3) : 2 + ((seed >> 2) % 2);
+      const shapes = pr.ptMode === "shapes";
+      const pal = [[ACC, TEAL], [ROSE, "#6366f1"], [TEAL, ACCD], ["#a855f7", ACC]][seed % 4];
+      const off = (seed >> 4) % unit;
+      const kinds = Array.from({ length: 5 }, (_, i) => (i + off) % unit);
+      const X = (i: number) => cx - 64 + i * 32;
+      if (cra === "abstract") return <g>{kinds.map((k, i) => <Num key={i} x={X(i)} y={cy} t={String.fromCharCode(65 + k)} s={26} />)}</g>;
+      if (shapes) return <g>{kinds.map((k, i) => k === 0
+        ? <circle key={i} cx={X(i)} cy={cy} r={13} fill={TEAL} stroke={W} strokeWidth={2} />
+        : k === 1
+          ? <rect key={i} x={X(i) - 12} y={cy - 12} width={24} height={24} rx={4} fill={TEAL} stroke={W} strokeWidth={2} />
+          : <path key={i} d={`M${X(i)} ${cy - 13} l13 26 h-26 z`} fill={TEAL} stroke={W} strokeWidth={2} />)}</g>;
+      return <g>{kinds.map((k, i) => k % 2 === 0
+        ? <circle key={i} cx={X(i)} cy={cy} r={13} fill={pal[0]} stroke={W} strokeWidth={2} />
+        : <rect key={i} x={X(i) - 12} y={cy - 12} width={24} height={24} rx={4} fill={pal[1]} stroke={W} strokeWidth={2} />)}</g>;
     }
     case "bar": {
-      const bars = [42, 66, 30, 54];
+      const bars = [0, 1, 2, 3].map((i) => 28 + ((seed >> (i * 2)) % 5) * 10);
       if (cra === "concrete") return <g><path d={`M${cx - 60} ${cy + 30} h120`} stroke={W} strokeWidth={2.5} strokeLinecap="round" />{bars.map((h, i) => Array.from({ length: Math.round(h / 14) }).map((_, j) => <rect key={`${i}-${j}`} x={cx - 54 + i * 30} y={cy + 24 - j * 14} width={20} height={12} rx={2} fill={j % 2 ? ACC : TEAL} stroke={W} />))}</g>;
       return <g><path d={`M${cx - 60} ${cy - 34} v64 h120`} fill="none" stroke={W} strokeWidth={2.5} strokeLinecap="round" />{bars.map((h, i) => <rect key={i} x={cx - 52 + i * 28} y={cy + 30 - h} width={18} height={h} rx={3} fill={i % 2 ? ACC : TEAL} />)}</g>;
     }
-    case "pictogram":
-      return <g>{[3, 5, 2, 4].map((v, i) => Array.from({ length: v }).map((_, j) => <rect key={`${i}-${j}`} x={cx - 54 + i * 30} y={cy + 30 - j * 16} width={20} height={13} rx={2} fill={TEAL} stroke={W} strokeWidth={1} />))}</g>;
+    case "pictogram": {
+      const vals = [0, 1, 2, 3].map((i) => 2 + ((seed >> (i * 2)) % 5));
+      return <g>{vals.map((v, i) => Array.from({ length: v }).map((_, j) => <rect key={`${i}-${j}`} x={cx - 54 + i * 30} y={cy + 30 - j * 16} width={20} height={13} rx={2} fill={TEAL} stroke={W} strokeWidth={1} />))}</g>;
+    }
     case "stats": {
-      const bars = [30, 46, 66, 40, 24];
+      const bars = [0, 1, 2, 3, 4].map((i) => 24 + ((seed >> (i * 2)) % 5) * 10);
       return <g><path d={`M${cx - 60} ${cy - 34} v64 h120`} fill="none" stroke={W} strokeWidth={2.5} strokeLinecap="round" />{bars.map((h, i) => <rect key={i} x={cx - 54 + i * 24} y={cy + 30 - h} width={16} height={h} rx={3} fill={i === 2 ? ACC : TEAL} />)}<Num x={cx} y={cy + 46} t="median" s={12} /></g>;
     }
-    case "angle":
-      return <g><line x1={cx - 50} y1={cy + 18} x2={cx + 50} y2={cy + 18} stroke={W} strokeWidth={3} strokeLinecap="round" /><line x1={cx} y1={cy + 18} x2={cx + 44} y2={cy - 26} stroke={ACC} strokeWidth={3} strokeLinecap="round" /><path d={`M${cx + 24} ${cy + 18} A24 24 0 0 0 ${cx + 15} ${cy - 1}`} fill="none" stroke={W} strokeWidth={2} /><Num x={cx + 4} y={cy - 26} t="180°" s={16} /></g>;
+    case "angle": {
+      const ang = 40 + (seed % 5) * 25, rad = (ang * Math.PI) / 180, len = 56, by = cy + 18;
+      const ax = cx + len * Math.cos(Math.PI - rad), ay = by - len * Math.sin(Math.PI - rad);
+      return <g><line x1={cx - 52} y1={by} x2={cx + 52} y2={by} stroke={W} strokeWidth={3} strokeLinecap="round" /><line x1={cx} y1={by} x2={ax} y2={ay} stroke={ACC} strokeWidth={3} strokeLinecap="round" /><path d={`M${cx + 24} ${by} A24 24 0 0 0 ${cx + 24 * Math.cos(rad)} ${by - 24 * Math.sin(rad)}`} fill="none" stroke={W} strokeWidth={2} /><Num x={cx + 8} y={cy - 26} t={`${ang}°`} s={15} /></g>;
+    }
     case "orderops":
       return <g><Num x={cx} y={cy} t="2 + 3 × 4" s={30} /><rect x={cx - 46} y={cy - 20} width={44} height={40} rx={6} fill="none" stroke={ACC} strokeWidth={2.5} /></g>;
     case "mission":
@@ -264,7 +315,7 @@ export function ResourceCover({
         <circle cx="52" cy="-10" r="90" fill={W} opacity="0.07" />
         <g stroke={W} strokeOpacity="0.06" strokeWidth="1"><path d="M40 0V180M120 0V180M200 0V180M280 0V180M0 45H320M0 90H320M0 135H320" /></g>
         <Decor />
-        <Scene theme={theme} cra={cra} seed={s} />
+        <Scene theme={theme} cra={cra} seed={s} pid={resource ? resource.id : ""} />
       </svg>
     </div>
   );

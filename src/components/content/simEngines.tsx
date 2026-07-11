@@ -123,6 +123,16 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-medium text-navy-600">{label}</span>{children}</div>;
 }
+// Stacked fraction: numerator over a bar over denominator (never "n/d").
+function Frac({ n, d, className }: { n: React.ReactNode; d: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn("inline-flex flex-col items-center justify-center align-middle leading-none", className)}>
+      <span className="px-1 pb-px">{n}</span>
+      <span className="h-px w-full self-stretch bg-current" />
+      <span className="px-1 pt-px">{d}</span>
+    </span>
+  );
+}
 
 // ==================================================================
 // 1. TEN FRAME — modes: count | bond | combine
@@ -401,7 +411,7 @@ function DecimalPlaceValue({ resource }: { resource: Resource }) {
         </div>
         <p className="text-xs text-navy-500">one whole =<br />10 tenths =<br />100 hundredths</p>
       </div>
-      <p className="mt-4 text-center font-display text-2xl font-bold text-navy-900">{o} + {t}⁄10 + {h}⁄100 = {value.toFixed(2)}</p>
+      <p className="mt-4 flex items-center justify-center gap-1.5 font-display text-2xl font-bold text-navy-900">{o} + <Frac n={t} d={10} /> + <Frac n={h} d={100} /> = {value.toFixed(2)}</p>
     </EngineCard>
   );
 }
@@ -483,7 +493,7 @@ function FractionCompare({ resource, equivalent }: { resource: Resource; equival
   );
   const Row = ({ n, d, setN, setD, tone, color }: { n: number; d: number; setN: (x: number) => void; setD: (x: number) => void; tone: string; color: string }) => (
     <div>
-      <div className="mb-2 flex items-center gap-3"><span className="font-display text-lg font-bold" style={{ color }}>{n}/{d}</span>{showPercent && <span className="text-xs text-navy-400">= {Math.round((n / d) * 100)}%</span>}</div>
+      <div className="mb-2 flex items-center gap-3"><span className="font-display text-lg font-bold" style={{ color }}><Frac n={n} d={d} /></span>{showPercent && <span className="text-xs text-navy-400">= {Math.round((n / d) * 100)}%</span>}</div>
       {model === "bars" ? <Bar n={n} d={d} tone={tone} /> : <FractionCircle n={n} d={d} color={color} />}
       <div className="mt-2 flex flex-wrap gap-4"><Stepper label="Numerator" value={n} set={(x) => setN(clamp(x, 0, d))} min={0} max={d} /><Stepper label="Denominator" value={d} set={(x) => { setD(x); setN(Math.min(n, x)); }} min={1} max={maxDen} /></div>
     </div>
@@ -523,7 +533,7 @@ function HalvesShader({ resource }: { resource: Resource }) {
         {model === "circles" ? <FractionCircle n={n} d={parts} color="#14b8a6" />
           : <div className="flex w-56 overflow-hidden rounded-xl border-2 border-navy-200">{Array.from({ length: parts }).map((_, i) => <div key={i} className={cn("h-12 flex-1 border-r border-white/70 last:border-r-0", i < n ? "bg-teal-500" : "bg-white")} />)}</div>}
         <Stepper label="Shaded parts" value={n} set={(x) => setN(clamp(x, 0, parts))} min={0} max={parts} />
-        <p className="font-display text-2xl font-bold text-navy-900">{n}/{parts}{n === 1 && parts === 2 ? " — one half" : n === 1 && parts === 4 ? " — one quarter" : ""}</p>
+        <p className="flex items-center gap-1.5 font-display text-2xl font-bold text-navy-900"><Frac n={n} d={parts} />{n === 1 && parts === 2 ? <span>— one half</span> : n === 1 && parts === 4 ? <span>— one quarter</span> : null}</p>
       </div>
     </EngineCard>
   );
@@ -541,7 +551,7 @@ function PercentGrid({ resource }: { resource: Resource }) {
       </div>
       <div className="mt-4 flex items-center justify-center gap-6 text-center">
         <div><p className="font-display text-3xl font-bold text-navy-900">{shaded}%</p><p className="text-xs text-navy-400">shaded</p></div>
-        <div><p className="font-display text-3xl font-bold text-teal-600">{shaded}/100</p><p className="text-xs text-navy-400">as a fraction</p></div>
+        <div><p className="flex justify-center font-display text-3xl font-bold text-teal-600"><Frac n={shaded} d={100} /></p><p className="text-xs text-navy-400">as a fraction</p></div>
       </div>
     </EngineCard>
   );
@@ -870,7 +880,7 @@ function RatioEngine({ resource }: { resource: Resource }) {
         <span className="font-display text-2xl font-bold text-navy-300">:</span>
         <div className="flex flex-wrap gap-1.5">{Array.from({ length: b * k }).map((_, i) => <span key={i} className="h-6 w-6 rounded-full bg-accent-400" />)}</div>
       </div>
-      <div className="mt-4 text-center"><p className="font-display text-2xl font-bold text-navy-900">{a * k} : {b * k} <span className="text-base font-medium text-navy-400">= {a} : {b}</span></p>{showProp && <p className="mt-1 text-xs text-navy-500">Part A is {a}/{whole} of the whole (proportion).</p>}</div>
+      <div className="mt-4 text-center"><p className="font-display text-2xl font-bold text-navy-900">{a * k} : {b * k} <span className="text-base font-medium text-navy-400">= {a} : {b}</span></p>{showProp && <p className="mt-1 flex items-center justify-center gap-1 text-xs text-navy-500">Part A is <Frac n={a} d={whole} /> of the whole (proportion).</p>}</div>
     </EngineCard>
   );
 }
