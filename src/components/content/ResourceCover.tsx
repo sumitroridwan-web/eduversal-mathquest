@@ -64,22 +64,38 @@ const ROSE = "#fda4af";
 
 const numberFont = "var(--font-display), Poppins, system-ui, sans-serif";
 
+/** Small deterministic hue shift so two resources sharing a motif still
+ *  render visibly different previews. Whites/greys are unaffected. */
+function hueShift(seed?: string): number | undefined {
+  if (!seed) return undefined;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return (Math.abs(h) % 5 - 2) * 12; // -24 … 24 degrees
+}
+
 export function ResourceCover({
   cover,
   type,
   className,
   size = "md",
+  seed,
 }: {
   cover: string;
   type: ContentType;
   className?: string;
   /** kept for API compatibility; artwork scales to the container */
   size?: "sm" | "md" | "lg";
+  /** resource id — gives each card a distinct hue while keeping the motif */
+  seed?: string;
 }) {
   void size;
   const c = covers[cover] ?? { from: "from-navy-500", to: "to-teal-600", motif: typeMotif[type] };
+  const deg = hueShift(seed);
   return (
-    <div className={cn("relative overflow-hidden bg-gradient-to-br", c.from, c.to, className)}>
+    <div
+      className={cn("relative overflow-hidden bg-gradient-to-br", c.from, c.to, className)}
+      style={deg ? { filter: `hue-rotate(${deg}deg)` } : undefined}
+    >
       <svg
         viewBox="0 0 320 180"
         preserveAspectRatio="xMidYMid slice"

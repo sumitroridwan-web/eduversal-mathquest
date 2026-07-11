@@ -57,7 +57,7 @@ export function ResourceDetail({
       {/* Header */}
       <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card">
         <div className="grid gap-0 md:grid-cols-[280px_1fr]">
-          <ResourceCover cover={resource.cover} type={resource.type} className="h-48 w-full md:h-full" size="lg" />
+          <ResourceCover cover={resource.cover} type={resource.type} seed={resource.id} className="h-48 w-full md:h-full" size="lg" />
           <div className="p-6">
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
               <Badge tone="navy">{typeLabel[resource.type]}</Badge>

@@ -38,7 +38,7 @@ export function ResourceCard({
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card transition-shadow hover:shadow-card-hover">
       <div className="relative">
         <Link href={locked ? "/login" : href} aria-label={`Open ${resource.title}`}>
-          <ResourceCover cover={resource.cover} type={resource.type} className="h-36 w-full" />
+          <ResourceCover cover={resource.cover} type={resource.type} seed={resource.id} className="h-36 w-full" />
         </Link>
         <div className="absolute left-3 top-3 flex gap-1.5">
           <Badge tone="navy" className="bg-white/90 backdrop-blur">
