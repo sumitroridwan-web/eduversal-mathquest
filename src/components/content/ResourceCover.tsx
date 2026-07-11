@@ -59,6 +59,10 @@ export function themeFor(r: Resource): string {
   if (c === "hunt") return "magnifier";
   if (c === "cards") return "numbercards";
   if (c === "mission") return "mission";
+  if (c === "length") return "length";
+  if (c === "capacity") return "capacity";
+  if (c === "temperature") return "temperature";
+  if (c === "probability") return "probability";
   if (c && c.startsWith("book")) return "book";
   return "count";
 }

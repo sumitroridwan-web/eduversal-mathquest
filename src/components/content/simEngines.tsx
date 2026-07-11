@@ -66,6 +66,10 @@ function SimEngineInner({ resource }: { resource: Resource }) {
     case "shapes": return <ShapeSortEngine resource={resource} />;
     case "pattern":
     case "patternmachine": return <PatternEngine resource={resource} />;
+    case "length": return <LengthLab resource={resource} />;
+    case "capacity": return <CapacityLab resource={resource} />;
+    case "temperature": return <TemperatureLab resource={resource} />;
+    case "probability": return <ProbabilityLab resource={resource} />;
     default: return <TenFrameEngine resource={resource} />;
   }
 }
@@ -1360,6 +1364,223 @@ function PatternEngine({ resource }: { resource: Resource }) {
       </div>
       <div className="mt-4 flex justify-center gap-3">{palette.map((k) => <button key={k} onClick={() => add(k)} disabled={complete} className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-navy-200 hover:border-teal-400 disabled:opacity-40" aria-label={`Add item ${k + 1}`}><PatternToken kind={k} mode={mode} /></button>)}</div>
       {complete && <p className="mt-4 text-center text-sm font-semibold">{correct ? <span className="text-emerald-600">✓ Pattern complete — well done!</span> : <span className="text-amber-600">Look at the repeating part again and try Reset.</span>}</p>}
+    </EngineCard>
+  );
+}
+
+// ==================================================================
+// LENGTH LAB — ruler, estimate/measure, compare (Measure — length)
+// ==================================================================
+function LengthLab({ resource }: { resource: Resource }) {
+  const MAX = 20;
+  const [a, setA] = useState(12);
+  const [b, setB] = useState(7);
+  const [compare, setCompare] = useState(false);
+  const [estimate, setEstimate] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const reset = () => { setA(12); setB(7); setCompare(false); setEstimate(false); setRevealed(false); };
+  const Ruler = () => (
+    <div className="relative h-10 w-full rounded bg-amber-50 ring-1 ring-amber-200">
+      {Array.from({ length: MAX + 1 }).map((_, i) => <div key={i} className="absolute top-0 w-px bg-navy-300" style={{ left: `${(i / MAX) * 100}%`, height: i % 5 === 0 ? 16 : 9 }} />)}
+      {Array.from({ length: MAX / 5 + 1 }).map((_, i) => <span key={i} className="absolute top-4 -translate-x-1/2 text-[10px] font-bold text-navy-500" style={{ left: `${((i * 5) / MAX) * 100}%` }}>{i * 5}</span>)}
+    </div>
+  );
+  const Ribbon = ({ len, color }: { len: number; color: string }) => (
+    <div className="relative h-6 w-full">
+      <div className="absolute left-0 top-1 h-4 rounded-r-md rounded-l-sm shadow-sm transition-all" style={{ width: `${(len / MAX) * 100}%`, background: color }} />
+    </div>
+  );
+  const tasks = [
+    { label: "Make the teal ribbon exactly 15 cm long.", done: a === 15 },
+    { label: "Make ribbon A twice as long as ribbon B.", done: compare && a === b * 2 && b > 0 },
+    { label: "Make the two ribbons differ by exactly 4 cm.", done: compare && Math.abs(a - b) === 4 },
+  ];
+  return (
+    <EngineCard hint={hintFor(resource)} onReset={reset}
+      settings={<>
+        <SettingRow label="Estimate mode (hide the number)"><Toggle checked={estimate} onChange={(v) => { setEstimate(v); setRevealed(false); }} /></SettingRow>
+        <SettingRow label="Compare two ribbons"><Toggle checked={compare} onChange={setCompare} /></SettingRow>
+      </>}>
+      <Intro>Drag the slider to change the ribbon length, then read it against the centimetre ruler.</Intro>
+      <div className="space-y-2 rounded-2xl bg-surface-soft p-4">
+        <Ruler />
+        <Ribbon len={a} color="#14b8a6" />
+        <div className="flex items-center gap-3">
+          <input type="range" min={1} max={MAX} value={a} onChange={(e) => setA(Number(e.target.value))} className="flex-1 accent-teal-600" aria-label="Ribbon A length" />
+          <span className="w-20 text-right font-display text-xl font-bold text-teal-700">{estimate && !revealed ? "?" : `${a} cm`}</span>
+        </div>
+        {compare && <>
+          <Ribbon len={b} color="#f59e0b" />
+          <div className="flex items-center gap-3">
+            <input type="range" min={1} max={MAX} value={b} onChange={(e) => setB(Number(e.target.value))} className="flex-1 accent-accent-500" aria-label="Ribbon B length" />
+            <span className="w-20 text-right font-display text-xl font-bold text-accent-600">{b} cm</span>
+          </div>
+          <p className="text-center text-sm font-semibold text-navy-700">{a === b ? "Same length!" : `${a > b ? "Teal" : "Amber"} is longer by ${Math.abs(a - b)} cm`}</p>
+        </>}
+        {estimate && <div className="flex justify-center pt-1"><Button size="sm" variant="secondary" onClick={() => setRevealed(true)}>Reveal length</Button></div>}
+      </div>
+      <Challenges tasks={tasks} />
+    </EngineCard>
+  );
+}
+
+// ==================================================================
+// CAPACITY LAB — pour between jugs, compare mL (Measure — capacity)
+// ==================================================================
+function CapacityLab({ resource }: { resource: Resource }) {
+  const CAP = 500;
+  const [a, setA] = useState(200);
+  const [b, setB] = useState(0);
+  const reset = () => { setA(200); setB(0); };
+  const pour = (from: "a" | "b") => {
+    const amt = 50;
+    if (from === "a") { const move = Math.min(amt, a, CAP - b); setA(a - move); setB(b + move); }
+    else { const move = Math.min(amt, b, CAP - a); setB(b - move); setA(a + move); }
+  };
+  const Jug = ({ v, color, label }: { v: number; color: string; label: string }) => (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative h-40 w-24 overflow-hidden rounded-b-2xl rounded-t-md border-2 border-navy-200 bg-sky-50">
+        <div className="absolute inset-x-0 bottom-0 transition-all duration-200" style={{ height: `${(v / CAP) * 100}%`, background: color, opacity: 0.85 }} />
+        {[100, 200, 300, 400].map((mk) => <div key={mk} className="absolute left-0 flex w-full items-center" style={{ bottom: `${(mk / CAP) * 100}%` }}><div className="w-3 border-t border-navy-400" /><span className="ml-0.5 text-[9px] font-bold text-navy-400">{mk}</span></div>)}
+      </div>
+      <span className="font-display text-lg font-bold" style={{ color }}>{label}: {v} mL</span>
+    </div>
+  );
+  const tasks = [
+    { label: "Pour water so jug A holds exactly 300 mL.", done: a === 300 },
+    { label: "Make both jugs hold the same amount.", done: a === b && a > 0 },
+    { label: "Empty jug A completely into jug B.", done: a === 0 && b > 0 },
+  ];
+  return (
+    <EngineCard hint={hintFor(resource)} onReset={reset}>
+      <Intro>Pour water between the jugs in steps of 50 mL. Read the scale to compare how much each holds.</Intro>
+      <div className="flex items-end justify-center gap-8 rounded-2xl bg-surface-soft p-4">
+        <div className="flex flex-col items-center gap-2"><Jug v={a} color="#14b8a6" label="A" /><Button size="sm" variant="outline" onClick={() => pour("a")} disabled={a === 0}>Pour A → B</Button></div>
+        <div className="pb-8 text-center">
+          <p className="font-display text-lg font-bold text-navy-800">{a === b ? "Equal" : a > b ? "A holds more" : "B holds more"}</p>
+          <p className="text-sm text-navy-500">by {Math.abs(a - b)} mL</p>
+        </div>
+        <div className="flex flex-col items-center gap-2"><Jug v={b} color="#f59e0b" label="B" /><Button size="sm" variant="outline" onClick={() => pour("b")} disabled={b === 0}>Pour B → A</Button></div>
+      </div>
+      <Challenges tasks={tasks} />
+    </EngineCard>
+  );
+}
+
+// ==================================================================
+// TEMPERATURE LAB — thermometer + environments (Measure — temperature)
+// ==================================================================
+const TEMP_ENV = [
+  { t: 0, label: "Snowy", emoji: "❄️", sky: "#d6ecff" },
+  { t: 10, label: "Cold", emoji: "🧥", sky: "#dbeafe" },
+  { t: 20, label: "Mild", emoji: "🌤️", sky: "#e6f4ff" },
+  { t: 30, label: "Warm", emoji: "☀️", sky: "#fff4d6" },
+  { t: 38, label: "Hot", emoji: "🔥", sky: "#ffe0c2" },
+];
+function TemperatureLab({ resource }: { resource: Resource }) {
+  const MIN = -10, MAX = 50;
+  const [temp, setTemp] = useState(20);
+  const [compare, setCompare] = useState(false);
+  const [tb, setTb] = useState(5);
+  const reset = () => { setTemp(20); setTb(5); setCompare(false); };
+  const env = [...TEMP_ENV].reverse().find((e) => temp >= e.t) ?? TEMP_ENV[0];
+  const Thermo = ({ value, color }: { value: number; color: string }) => {
+    const pct = ((value - MIN) / (MAX - MIN)) * 100;
+    return (
+      <div className="relative flex h-52 w-10 flex-col items-center">
+        <div className="relative h-44 w-3 rounded-full bg-navy-100">
+          <div className="absolute inset-x-0 bottom-0 rounded-full transition-all duration-200" style={{ height: `${pct}%`, background: color }} />
+          {[-10, 0, 10, 20, 30, 40, 50].map((mk) => <span key={mk} className="absolute -right-6 -translate-y-1/2 text-[9px] font-bold text-navy-400" style={{ bottom: `${((mk - MIN) / (MAX - MIN)) * 100}%` }}>{mk}°</span>)}
+        </div>
+        <div className="-mt-1 flex h-8 w-8 items-center justify-center rounded-full" style={{ background: color }}><span className="text-xs font-bold text-white">{value}°</span></div>
+      </div>
+    );
+  };
+  const tasks = [
+    { label: "Set the thermometer to exactly 25°C.", done: temp === 25 },
+    { label: "Make it freezing — set it to 0°C.", done: temp === 0 },
+    { label: "Make thermometer A 15° warmer than B.", done: compare && temp - tb === 15 },
+  ];
+  return (
+    <EngineCard hint={hintFor(resource)} onReset={reset}
+      settings={<SettingRow label="Compare two thermometers"><Toggle checked={compare} onChange={setCompare} /></SettingRow>}>
+      <Intro>Slide to change the temperature and watch the weather change. Read the scale in degrees Celsius.</Intro>
+      <div className="flex items-center justify-around gap-4 rounded-2xl p-4 transition-colors" style={{ background: env.sky }}>
+        <div className="flex items-center gap-6">
+          <Thermo value={temp} color="#ef4444" />
+          {compare && <Thermo value={tb} color="#3b82f6" />}
+        </div>
+        <div className="text-center">
+          <div className="text-5xl">{env.emoji}</div>
+          <p className="mt-1 font-display text-xl font-bold text-navy-900">{env.label}</p>
+          {compare && <p className="mt-1 text-sm font-semibold text-navy-600">A is {Math.abs(temp - tb)}° {temp >= tb ? "warmer" : "colder"} than B</p>}
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center gap-3"><span className="w-8 text-sm font-bold text-red-500">A</span><input type="range" min={MIN} max={MAX} value={temp} onChange={(e) => setTemp(Number(e.target.value))} className="flex-1 accent-red-500" aria-label="Temperature A" /><span className="w-12 text-right font-display font-bold text-red-500">{temp}°C</span></div>
+        {compare && <div className="flex items-center gap-3"><span className="w-8 text-sm font-bold text-blue-500">B</span><input type="range" min={MIN} max={MAX} value={tb} onChange={(e) => setTb(Number(e.target.value))} className="flex-1 accent-blue-500" aria-label="Temperature B" /><span className="w-12 text-right font-display font-bold text-blue-500">{tb}°C</span></div>}
+      </div>
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        {TEMP_ENV.map((e) => <button key={e.label} onClick={() => setTemp(e.t)} className="rounded-full border border-navy-200 px-3 py-1 text-sm font-semibold text-navy-600 hover:border-teal-400">{e.emoji} {e.label}</button>)}
+      </div>
+      <Challenges tasks={tasks} />
+    </EngineCard>
+  );
+}
+
+// ==================================================================
+// PROBABILITY LAB — spinner / dice / bag, trials, live frequency
+// ==================================================================
+type ProbMode = "spinner" | "dice" | "bag";
+const SPIN_SECT = [{ c: "#14b8a6", n: "Teal", w: 3 }, { c: "#f59e0b", n: "Amber", w: 2 }, { c: "#f43f5e", n: "Rose", w: 1 }];
+function ProbabilityLab({ resource }: { resource: Resource }) {
+  const [mode, setMode] = useState<ProbMode>("spinner");
+  const [counts, setCounts] = useState<number[]>([0, 0, 0, 0, 0, 0]);
+  const [last, setLast] = useState<number | null>(null);
+  const outcomes = mode === "dice" ? 6 : mode === "bag" ? 3 : SPIN_SECT.length;
+  const labels = mode === "dice" ? ["1", "2", "3", "4", "5", "6"] : mode === "bag" ? ["🔴", "🔵", "🟡"] : SPIN_SECT.map((s) => s.n);
+  const colors = mode === "dice" ? Array(6).fill("#6366f1") : mode === "bag" ? ["#ef4444", "#3b82f6", "#f59e0b"] : SPIN_SECT.map((s) => s.c);
+  const weights = mode === "spinner" ? SPIN_SECT.map((s) => s.w) : Array(outcomes).fill(1);
+  const totalW = weights.reduce((s, x) => s + x, 0);
+  const totalTrials = counts.slice(0, outcomes).reduce((s, x) => s + x, 0);
+  const reset = () => { setCounts([0, 0, 0, 0, 0, 0]); setLast(null); };
+  const setModeReset = (m: ProbMode) => { setMode(m); reset(); };
+  const trial = () => { const r = Math.random() * totalW; let acc = 0, o = 0; for (let i = 0; i < outcomes; i++) { acc += weights[i]; if (r < acc) { o = i; break; } } setCounts((c) => c.map((v, i) => i === o ? v + 1 : v)); setLast(o); };
+  const many = () => { const add = [0, 0, 0, 0, 0, 0]; for (let k = 0; k < 20; k++) { const r = Math.random() * totalW; let acc = 0, o = 0; for (let i = 0; i < outcomes; i++) { acc += weights[i]; if (r < acc) { o = i; break; } } add[o]++; } setCounts((c) => c.map((v, i) => v + add[i])); setLast(null); };
+  const tasks = [
+    { label: "Run at least 30 trials and see which outcome is most common.", done: totalTrials >= 30 },
+    { label: "Predict the most likely outcome, then check with 20+ trials.", done: totalTrials >= 20 },
+  ];
+  const segAngles = (() => { let acc = 0; return weights.map((w) => { const s = acc; acc += (w / totalW) * 360; return [s, acc]; }); })();
+  return (
+    <EngineCard hint={hintFor(resource)} onReset={reset}
+      settings={<SettingRow label="Experiment"><Segmented<ProbMode> value={mode} onChange={setModeReset} options={[{ label: "Spinner", value: "spinner" }, { label: "Dice", value: "dice" }, { label: "Bag", value: "bag" }]} /></SettingRow>}>
+      <Intro>Run chance experiments and watch the results build up. Do the actual results match what you expected?</Intro>
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface-soft p-4">
+        <div className="flex h-28 items-center justify-center">
+          {mode === "spinner" && <svg viewBox="-55 -55 110 110" className="h-28 w-28">{SPIN_SECT.map((s, i) => { const a0 = (segAngles[i][0] - 90) * Math.PI / 180, a1 = (segAngles[i][1] - 90) * Math.PI / 180, r = 48; const large = segAngles[i][1] - segAngles[i][0] > 180 ? 1 : 0; return <path key={i} d={`M0 0 L${r * Math.cos(a0)} ${r * Math.sin(a0)} A${r} ${r} 0 ${large} 1 ${r * Math.cos(a1)} ${r * Math.sin(a1)} Z`} fill={s.c} stroke="#fff" strokeWidth={2} />; })}<circle r={5} fill="#1b2540" /></svg>}
+          {mode === "dice" && <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white text-5xl font-bold shadow ring-2 ring-navy-200">{last !== null ? last + 1 : "🎲"}</div>}
+          {mode === "bag" && <div className="text-5xl">{last !== null ? labels[last] : "👝"}</div>}
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" onClick={trial}>Run 1</Button>
+          <Button size="sm" variant="accent" onClick={many}>Run ×20</Button>
+        </div>
+        {/* live frequency chart */}
+        <div className="w-full">
+          <div className="flex items-end justify-center gap-3" style={{ height: 90 }}>
+            {labels.map((lb, i) => { const max = Math.max(1, ...counts.slice(0, outcomes)); const h = (counts[i] / max) * 78; return (
+              <div key={i} className="flex flex-col items-center justify-end">
+                <span className="text-xs font-bold text-navy-600">{counts[i]}</span>
+                <div className="w-8 rounded-t transition-all" style={{ height: h, background: colors[i] }} />
+                <span className="mt-1 text-xs font-semibold text-navy-500">{lb}</span>
+              </div>
+            ); })}
+          </div>
+          <p className="mt-2 text-center text-sm font-semibold text-navy-600">{totalTrials} trials{mode === "spinner" && " · bigger sectors are more likely"}</p>
+        </div>
+      </div>
+      <Challenges tasks={tasks} />
     </EngineCard>
   );
 }

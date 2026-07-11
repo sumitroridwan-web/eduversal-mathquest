@@ -223,6 +223,37 @@ function scene(theme: string, r: Resource): React.ReactNode {
         <T x={160} y={172} t="Multiples of 5" s={11} fill={TEALD} w={600} />
       </g>;
     }
+    case "length": {
+      return <g>
+        <rect x={40} y={92} width={240} height={16} rx={3} fill="#fff5e0" stroke={ACC} strokeWidth={1.5} />
+        {Array.from({ length: 13 }).map((_, i) => <line key={i} x1={40 + i * 20} y1={92} x2={40 + i * 20} y2={i % 5 === 0 ? 104 : 99} stroke={ACC} strokeWidth={1} />)}
+        <rect x={40} y={72} width={150} height={12} rx={4} fill={TEAL} />
+        <T x={230} y={78} t="15 cm" s={14} fill={TEALD} />
+        <T x={160} y={140} t="Measure the length" s={12} fill={INK} w={600} />
+      </g>;
+    }
+    case "capacity": {
+      const jug = (cx: number, fillPct: number, col: string) => <g><rect x={cx - 20} y={60} width={40} height={78} rx={8} fill="#eef6ff" stroke={CARD} strokeWidth={2} /><rect x={cx - 18} y={136 - 74 * fillPct} width={36} height={74 * fillPct} rx={4} fill={col} opacity={0.85} />{[0.25, 0.5, 0.75].map((m) => <line key={m} x1={cx - 20} y1={136 - 74 * m} x2={cx - 12} y2={136 - 74 * m} stroke={INK} strokeWidth={1} />)}</g>;
+      return <g>{jug(110, 0.6, TEAL)}{jug(210, 0.3, ACC)}<T x={160} y={104} t=">" s={22} fill={NAVY} /><T x={160} y={158} t="Compare capacity (mL)" s={11} fill={INK} w={600} /></g>;
+    }
+    case "temperature": {
+      const pct = 0.62;
+      return <g>
+        <rect x={100} y={54} width={10} height={86} rx={5} fill="#eef1f7" /><rect x={100} y={140 - 86 * pct} width={10} height={86 * pct} rx={5} fill="#ef4444" /><circle cx={105} cy={148} r={12} fill="#ef4444" />
+        {[0, 20, 40].map((mk, i) => <T key={mk} x={128} y={140 - i * 40} t={`${mk}°`} s={10} fill={INK} anchor="start" w={600} />)}
+        <text x={220} y={92} fontSize={40} textAnchor="middle">☀️</text>
+        <T x={220} y={128} t="28°C · Warm" s={13} fill={NAVY} />
+        <T x={160} y={166} t="Read the temperature" s={11} fill={INK} w={600} />
+      </g>;
+    }
+    case "probability": {
+      const segs = [{ c: TEAL, w: 3 }, { c: ACC, w: 2 }, { c: "#f43f5e", w: 1 }]; const tot = 6; let acc = 0;
+      return <g>
+        <g transform="translate(96 100)">{segs.map((s, i) => { const a0 = (acc / tot) * 360 - 90; acc += s.w; const a1 = (acc / tot) * 360 - 90; const r = 40; const p = (a: number) => [r * Math.cos(a * Math.PI / 180), r * Math.sin(a * Math.PI / 180)]; const [x0, y0] = p(a0), [x1, y1] = p(a1); return <path key={i} d={`M0 0 L${x0} ${y0} A${r} ${r} 0 ${s.w > 3 ? 1 : 0} 1 ${x1} ${y1} Z`} fill={s.c} stroke={W} strokeWidth={2} />; })}<path d="M0 -46 l-6 -10 h12 Z" fill={NAVY} /><circle r={4} fill={NAVY} /></g>
+        <g transform="translate(196 0)">{[36, 24, 14].map((h, i) => <g key={i}><rect x={i * 26} y={140 - h} width={18} height={h} rx={2} fill={[TEAL, ACC, "#f43f5e"][i]} /></g>)}</g>
+        <T x={160} y={162} t="Predict & run trials" s={11} fill={INK} w={600} />
+      </g>;
+    }
     default: {
       const cw = 22, gap = 4, cols = 5, sx = 160 - (cols * cw + (cols - 1) * gap) / 2, sy = 72;
       return <g>{Array.from({ length: 10 }).map((_, i) => { const col = i % 5, row = Math.floor(i / 5); const x = sx + col * (cw + gap), y = sy + row * (cw + gap); return <rect key={i} x={x} y={y} width={cw} height={cw} rx={5} fill={W} stroke={LINE} strokeWidth={1.5} />; })}</g>;
