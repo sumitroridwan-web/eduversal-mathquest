@@ -1,4 +1,5 @@
 import type { Resource } from "@/types";
+import { primarySimulations } from "./simulationsPrimary";
 
 // ==========================================================
 // MathQuest content library — original Eduversal metadata.
@@ -1040,6 +1041,9 @@ export const resources: Resource[] = [
     plays: 1340,
     relatedIds: ["res-data-graph-challenge", "res-chart-builder"],
   },
+
+  // ---------------- CAMBRIDGE PRIMARY SIMULATIONS (Stages 1–6) ----------------
+  ...primarySimulations,
 ];
 
 // -------- Derived helpers --------

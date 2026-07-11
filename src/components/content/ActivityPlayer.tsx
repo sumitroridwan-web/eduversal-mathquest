@@ -8,15 +8,16 @@ import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/Progress";
 import { useToasts } from "@/stores/ui";
 import { cn } from "@/lib/utils";
+import { SimulationEngine } from "./simEngines";
 
 /**
- * A lightweight, genuinely interactive demo player that adapts to the
- * resource type. It's a prototype stand-in for the full activity engine —
- * but every control works (no dead buttons).
+ * The activity player adapts to the resource type: bespoke interactive
+ * manipulatives for simulations, a quiz for games, and a paged reader with
+ * checkpoints for books. Every control works (no dead buttons).
  */
 export function ActivityPlayer({ resource }: { resource: Resource }) {
   if (resource.type === "book") return <BookReader resource={resource} />;
-  if (resource.type === "simulation") return <TenFrameSim resource={resource} />;
+  if (resource.type === "simulation") return <SimulationEngine resource={resource} />;
   return <QuizGame resource={resource} />;
 }
 
@@ -136,73 +137,6 @@ function buildOptions(answer: number, seed: string): number[] {
     i++;
   }
   return Array.from(set).sort((a, b) => a - b);
-}
-
-// ---------- Simulation: interactive ten frame ----------
-function TenFrameSim({ resource }: { resource: Resource }) {
-  const [count, setCount] = useState(4);
-  const [showHint, setShowHint] = useState(false);
-  const cells = Array.from({ length: 10 }, (_, i) => i < count);
-  const toTen = 10 - count;
-
-  return (
-    <div className="rounded-2xl border border-navy-100 bg-white p-6 shadow-card">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Badge tone="teal">Interactive simulation</Badge>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowHint((v) => !v)}>
-            <Lightbulb className="h-4 w-4" /> Hint
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setCount(0)}>
-            <RotateCcw className="h-4 w-4" /> Reset
-          </Button>
-        </div>
-      </div>
-
-      <p className="mb-4 text-sm text-navy-600">
-        Tap the frame to add or remove counters. How many more make ten?
-      </p>
-
-      <div className="mx-auto grid w-fit grid-cols-5 gap-2 rounded-2xl bg-surface-soft p-4">
-        {cells.map((filled, i) => (
-          <button
-            key={i}
-            onClick={() => setCount(filled ? i : i + 1)}
-            className={cn(
-              "flex h-14 w-14 items-center justify-center rounded-xl border-2 transition-colors",
-              filled ? "border-teal-500 bg-teal-500 text-white" : "border-navy-200 bg-white hover:bg-teal-50",
-            )}
-            aria-label={`Counter ${i + 1} ${filled ? "filled" : "empty"}`}
-          >
-            {filled && <span className="h-6 w-6 rounded-full bg-white/90" />}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-5 flex items-center justify-center gap-6 text-center">
-        <div>
-          <p className="font-display text-3xl font-bold text-navy-900">{count}</p>
-          <p className="text-xs text-navy-400">counters</p>
-        </div>
-        <div className="text-navy-300">+</div>
-        <div>
-          <p className="font-display text-3xl font-bold text-teal-600">{toTen}</p>
-          <p className="text-xs text-navy-400">makes ten</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex justify-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => setCount((c) => Math.max(0, c - 1))}>− Remove</Button>
-        <Button variant="secondary" size="sm" onClick={() => setCount((c) => Math.min(10, c + 1))}>+ Add</Button>
-      </div>
-
-      {showHint && (
-        <p className="mt-4 rounded-xl bg-accent-50 p-3 text-sm text-navy-700">
-          💡 {resource.discussionPrompts?.[0] ?? "Count the empty boxes — that's how many more you need to make ten."}
-        </p>
-      )}
-    </div>
-  );
 }
 
 // ---------- Book: reader with checkpoints ----------
