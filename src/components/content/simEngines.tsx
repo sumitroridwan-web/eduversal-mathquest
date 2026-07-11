@@ -548,42 +548,194 @@ function FractionEngine({ resource }: { resource: Resource }) {
   const p = simPreset(resource.id);
   if (p.frMode === "percent") return <PercentGrid resource={resource} />;
   if (p.frMode === "halves") return <HalvesShader resource={resource} />;
-  return <FractionCompare resource={resource} equivalent={p.frMode === "equivalent"} />;
+  return <FractionLab resource={resource} />;
 }
-function FractionCompare({ resource, equivalent }: { resource: Resource; equivalent?: boolean }) {
-  const p = simPreset(resource.id);
-  const [model, setModel] = useState<"bars" | "circles">(p.frModel ?? "bars");
-  const [maxDen, setMaxDen] = useState(12);
-  const [showPercent, setShowPercent] = useState(true);
-  const [n1, setN1] = useState(1); const [d1, setD1] = useState(2);
-  const [n2, setN2] = useState(equivalent ? 2 : 2); const [d2, setD2] = useState(equivalent ? 4 : 3);
-  useEffect(() => { setD1((d) => Math.min(d, maxDen)); setD2((d) => Math.min(d, maxDen)); setN1((n) => Math.min(n, d1)); setN2((n) => Math.min(n, d2)); }, [maxDen, d1, d2]);
-  const v1 = n1 / d1, v2 = n2 / d2;
-  const sym = v1 > v2 ? ">" : v1 < v2 ? "<" : "=";
-  const Bar = ({ n, d, tone }: { n: number; d: number; tone: string }) => (
-    <div className="flex overflow-hidden rounded-xl border-2 border-navy-200">{Array.from({ length: d }).map((_, i) => <div key={i} className={cn("h-10 flex-1 border-r border-white/70 last:border-r-0", i < n ? tone : "bg-white")} />)}</div>
+
+// ---- Fraction Lab: linked circle / bar / number-line representations ----
+const TEAL_A = "#14b8a6", AMBER_B = "#f59e0b";
+type FMarker = { n: number; d: number; color: string; onSet: (n: number) => void };
+
+function FracCirclePlay({ n, d, color, onSet }: { n: number; d: number; color: string; onSet: (n: number) => void }) {
+  const S = 116, cx = S / 2, cy = S / 2, r = S / 2 - 6;
+  return (
+    <svg viewBox={`0 0 ${S} ${S}`} className="h-28 w-28 shrink-0" role="group" aria-label="fraction circle (click a slice)">
+      <circle cx={cx} cy={cy} r={r + 3} fill="#eef1f6" />
+      {Array.from({ length: d }).map((_, i) => {
+        const a0 = (i / d) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / d) * 2 * Math.PI - Math.PI / 2;
+        const pt = (a: number) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+        const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+        const large = a1 - a0 > Math.PI ? 1 : 0;
+        return <path key={i} d={`M${cx} ${cy} L${x0} ${y0} A${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`}
+          fill={i < n ? color : "#fff"} stroke="#c1cbde" strokeWidth={1.5}
+          className="cursor-pointer transition-opacity hover:opacity-80"
+          onClick={() => onSet(i < n ? i : i + 1)} />;
+      })}
+    </svg>
   );
-  const Row = ({ n, d, setN, setD, tone, color }: { n: number; d: number; setN: (x: number) => void; setD: (x: number) => void; tone: string; color: string }) => (
-    <div>
-      <div className="mb-2 flex items-center gap-3"><span className="font-display text-lg font-bold" style={{ color }}><Frac n={n} d={d} /></span>{showPercent && <span className="text-xs text-navy-400">= {Math.round((n / d) * 100)}%</span>}</div>
-      {model === "bars" ? <Bar n={n} d={d} tone={tone} /> : <FractionCircle n={n} d={d} color={color} />}
-      <div className="mt-2 flex flex-wrap gap-4"><Stepper label="Numerator" value={n} set={(x) => setN(clamp(x, 0, d))} min={0} max={d} /><Stepper label="Denominator" value={d} set={(x) => { setD(x); setN(Math.min(n, x)); }} min={1} max={maxDen} /></div>
+}
+function FracBarPlay({ n, d, color, onSet }: { n: number; d: number; color: string; onSet: (n: number) => void }) {
+  const [drag, setDrag] = useState(false);
+  const setFromX = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    onSet(clamp(Math.ceil(((e.clientX - r.left) / r.width) * d), 0, d));
+  };
+  return (
+    <div className="flex h-12 w-full min-w-[150px] cursor-pointer touch-none select-none overflow-hidden rounded-xl border-2 border-navy-200"
+      onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDrag(true); setFromX(e); }}
+      onPointerMove={(e) => { if (drag) setFromX(e); }}
+      onPointerUp={() => setDrag(false)} onPointerCancel={() => setDrag(false)}
+      role="slider" aria-label="fraction bar (click or drag)" aria-valuenow={n} aria-valuemin={0} aria-valuemax={d}>
+      {Array.from({ length: d }).map((_, i) => <div key={i} className="h-full flex-1 border-r border-white/70 transition-colors last:border-r-0" style={{ background: i < n ? color : "#fff" }} />)}
     </div>
   );
+}
+function FracLine({ markers }: { markers: FMarker[] }) {
+  const Wd = 300, H = 66, pad = 20, y = 36;
+  const [drag, setDrag] = useState<number | null>(null);
+  const toX = (v: number) => pad + v * (Wd - 2 * pad);
+  const vAt = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const vbX = ((e.clientX - r.left) / r.width) * Wd;
+    return clamp((vbX - pad) / (Wd - 2 * pad), 0, 1);
+  };
+  const grab = (e: React.PointerEvent<SVGSVGElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const v = vAt(e);
+    let idx = 0, best = Infinity;
+    markers.forEach((m, i) => { const dd = Math.abs(v - m.n / m.d); if (dd < best) { best = dd; idx = i; } });
+    setDrag(idx); markers[idx].onSet(clamp(Math.round(v * markers[idx].d), 0, markers[idx].d));
+  };
+  const move = (e: React.PointerEvent<SVGSVGElement>) => { if (drag === null) return; const m = markers[drag]; m.onSet(clamp(Math.round(vAt(e) * m.d), 0, m.d)); };
   return (
-    <EngineCard hint={hintFor(resource)} onReset={() => { setN1(1); setD1(2); setN2(2); setD2(equivalent ? 4 : 3); }}
-      settings={<>
-        <SettingRow label="Model"><Segmented value={model} onChange={setModel} options={[{ label: "Bars", value: "bars" }, { label: "Circles", value: "circles" }]} /></SettingRow>
-        <SettingRow label="Largest denominator"><Segmented value={maxDen} onChange={setMaxDen} options={[{ label: "6", value: 6 }, { label: "10", value: 10 }, { label: "12", value: 12 }]} /></SettingRow>
-        <SettingRow label="Show percentage"><Toggle checked={showPercent} onChange={setShowPercent} /></SettingRow>
-      </>}
-    >
-      <Intro>{p.intro ?? "Change each fraction and compare."}</Intro>
-      <div className="space-y-4">
-        <Row n={n1} d={d1} setN={setN1} setD={setD1} tone="bg-teal-500" color="#14b8a6" />
-        <div className="text-center font-display text-3xl font-bold text-navy-900">{sym}{equivalent && v1 === v2 && <span className="ml-3 align-middle text-sm font-semibold text-emerald-600">equivalent!</span>}</div>
-        <Row n={n2} d={d2} setN={setN2} setD={setD2} tone="bg-accent-400" color="#f59e0b" />
+    <svg viewBox={`0 0 ${Wd} ${H}`} className="w-full max-w-md cursor-grab touch-none active:cursor-grabbing"
+      onPointerDown={grab} onPointerMove={move} onPointerUp={() => setDrag(null)} onPointerCancel={() => setDrag(null)}>
+      <line x1={pad} y1={y} x2={Wd - pad} y2={y} stroke="#31415f" strokeWidth={2.5} strokeLinecap="round" />
+      {markers.map((m, mi) => Array.from({ length: m.d + 1 }).map((_, k) => <line key={`${mi}-${k}`} x1={toX(k / m.d)} y1={y - 5} x2={toX(k / m.d)} y2={y + 5} stroke={m.color} strokeOpacity={0.4} strokeWidth={1.5} />))}
+      <text x={pad} y={y + 22} fontSize={11} textAnchor="middle" fill="#6a80a9" fontWeight={700}>0</text>
+      <text x={Wd - pad} y={y + 22} fontSize={11} textAnchor="middle" fill="#6a80a9" fontWeight={700}>1</text>
+      {markers.map((m, mi) => { const x = toX(m.n / m.d); return <g key={mi}><line x1={x} y1={y - 15} x2={x} y2={y + 6} stroke={m.color} strokeWidth={3} /><circle cx={x} cy={y - 17} r={8} fill={m.color} stroke="#fff" strokeWidth={2} /></g>; })}
+    </svg>
+  );
+}
+
+type FTask = { label: string; ok: (v1: number, v2: number, d1: number, d2: number) => boolean; needB: boolean };
+const FRAC_TASKS: FTask[] = [
+  { label: "Make fraction A equal to one half.", ok: (v1) => v1 === 0.5, needB: false },
+  { label: "Make A larger than three-quarters.", ok: (v1) => v1 > 0.75, needB: false },
+  { label: "Make A equal to two-thirds.", ok: (v1) => Math.abs(v1 - 2 / 3) < 1e-9, needB: false },
+  { label: "Make A and B equal amounts with different denominators (equivalent!).", ok: (v1, v2, d1, d2) => v1 === v2 && d1 !== d2, needB: true },
+  { label: "Make A smaller than B.", ok: (v1, v2) => v1 < v2, needB: true },
+];
+
+function FractionLab({ resource }: { resource: Resource }) {
+  const p = simPreset(resource.id);
+  const [maxDen, setMaxDen] = useState(12);
+  const [compare, setCompare] = useState(true);
+  const [show, setShow] = useState({ circle: true, bar: true, line: true, numbers: true });
+  const [challenge, setChallenge] = useState(false);
+  const [chIdx, setChIdx] = useState(0);
+  const [n1, setN1] = useState(1); const [d1, setD1] = useState(2);
+  const [n2, setN2] = useState(2); const [d2, setD2] = useState(3);
+  useEffect(() => { setD1((d) => Math.min(d, maxDen)); setD2((d) => Math.min(d, maxDen)); }, [maxDen]);
+  useEffect(() => { setN1((n) => Math.min(n, d1)); }, [d1]);
+  useEffect(() => { setN2((n) => Math.min(n, d2)); }, [d2]);
+  useEffect(() => { if (challenge && FRAC_TASKS[chIdx].needB) setCompare(true); }, [challenge, chIdx]);
+
+  const v1 = n1 / d1, v2 = n2 / d2;
+  const rel = v1 > v2 ? ">" : v1 < v2 ? "<" : "=";
+  const equiv = compare && v1 === v2 && d1 !== d2;
+  const same = compare && n1 === n2 && d1 === d2;
+  const task = FRAC_TASKS[chIdx];
+  const chDone = task.ok(v1, v2, d1, d2);
+  const hint = equiv ? "Nice — two different fractions covering the same amount. That's equivalence!"
+    : compare ? "Drag the number-line dots. Which fraction covers more of the whole?"
+    : "Click the pie slices, drag the bar, or move the slider to change the fraction.";
+  const markers: FMarker[] = compare
+    ? [{ n: n1, d: d1, color: TEAL_A, onSet: (x) => setN1(clamp(x, 0, d1)) }, { n: n2, d: d2, color: AMBER_B, onSet: (x) => setN2(clamp(x, 0, d2)) }]
+    : [{ n: n1, d: d1, color: TEAL_A, onSet: (x) => setN1(clamp(x, 0, d1)) }];
+
+  const pillCls = (on: boolean, accent = false) => cn("rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+    on ? (accent ? "border-accent-500 bg-accent-50 text-accent-700" : "border-teal-500 bg-teal-50 text-teal-700") : "border-navy-200 text-navy-500 hover:bg-navy-50");
+  const Pill = ({ k, label }: { k: keyof typeof show; label: string }) => (
+    <button onClick={() => setShow((s) => ({ ...s, [k]: !s[k] }))} aria-pressed={show[k]} className={pillCls(show[k])}>{label}</button>
+  );
+
+  const panel = (label: string, n: number, d: number, setN: (x: number) => void, setD: (x: number) => void, color: string, cls: string) => (
+    <div className={cn("rounded-2xl border-2 p-3.5", cls)}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white" style={{ background: color }}>{label}</span>
+        <div className="flex items-center gap-2 font-display font-bold" style={{ color }}>
+          <span className="text-xl"><Frac n={n} d={d} /></span>
+          {show.numbers && <span className="text-[11px] font-medium text-navy-400">= {(n / d).toFixed(2)} = {Math.round((n / d) * 100)}%</span>}
+        </div>
       </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {show.circle && <FracCirclePlay n={n} d={d} color={color} onSet={(x) => setN(clamp(x, 0, d))} />}
+        {show.bar && <div className="min-w-[150px] flex-1"><FracBarPlay n={n} d={d} color={color} onSet={(x) => setN(clamp(x, 0, d))} /></div>}
+      </div>
+      <div className="mt-3 space-y-2">
+        <label className="flex items-center gap-2 text-xs font-medium text-navy-500">
+          <span className="w-24 shrink-0">Numerator {n}</span>
+          <input type="range" min={0} max={d} step={1} value={n} onChange={(e) => setN(Number(e.target.value))} className="flex-1" style={{ accentColor: color }} aria-label={`${label} numerator`} />
+        </label>
+        <label className="flex items-center gap-2 text-xs font-medium text-navy-500">
+          <span className="w-24 shrink-0">Denominator {d}</span>
+          <input type="range" min={1} max={maxDen} step={1} value={d} onChange={(e) => { const nd = Number(e.target.value); setD(nd); setN(Math.min(n, nd)); }} className="flex-1" style={{ accentColor: color }} aria-label={`${label} denominator`} />
+        </label>
+      </div>
+    </div>
+  );
+
+  return (
+    <EngineCard hint={hintFor(resource)}
+      onReset={() => { setN1(1); setD1(2); setN2(2); setD2(3); setChIdx(0); }}
+      settings={<SettingRow label="Largest denominator"><Segmented value={maxDen} onChange={setMaxDen} options={[{ label: "6", value: 6 }, { label: "10", value: 10 }, { label: "12", value: 12 }]} /></SettingRow>}
+    >
+      <Intro>{p.intro ?? "Build and compare fractions with circles, bars and a number line."}</Intro>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-navy-400">Show</span>
+        <Pill k="circle" label="Circle" /><Pill k="bar" label="Bar" /><Pill k="line" label="Number line" /><Pill k="numbers" label="Decimals" />
+        <span className="mx-1 h-4 w-px bg-navy-200" />
+        <button onClick={() => setCompare((v) => !v)} aria-pressed={compare} className={pillCls(compare)}>Compare two</button>
+        <button onClick={() => setChallenge((v) => !v)} aria-pressed={challenge} className={pillCls(challenge, true)}>Challenge</button>
+      </div>
+
+      {compare ? (
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+          {panel("A", n1, d1, setN1, setD1, TEAL_A, "border-teal-200 bg-teal-50/40")}
+          <div className="flex flex-col items-center justify-center gap-1 py-1">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-900 font-display text-2xl font-bold text-white">{rel}</span>
+            {equiv && <span className="text-[11px] font-semibold text-emerald-600">equivalent</span>}
+            {same && <span className="text-[11px] font-semibold text-navy-400">same</span>}
+          </div>
+          {panel("B", n2, d2, setN2, setD2, AMBER_B, "border-accent-200 bg-accent-50/40")}
+        </div>
+      ) : (
+        <div className="mx-auto max-w-md">{panel("A", n1, d1, setN1, setD1, TEAL_A, "border-teal-200 bg-teal-50/40")}</div>
+      )}
+
+      {show.line && (
+        <div className="mt-4 flex flex-col items-center rounded-2xl bg-surface-soft p-3">
+          <p className="mb-1 text-xs font-semibold text-navy-400">Number line</p>
+          <FracLine markers={markers} />
+        </div>
+      )}
+
+      {challenge && (
+        <div className={cn("mt-4 rounded-2xl border-2 p-4 transition-colors", chDone ? "border-emerald-300 bg-emerald-50/60" : "border-accent-300 bg-accent-50/40")}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-accent-700">Challenge {chIdx + 1}/{FRAC_TASKS.length}</p>
+              <p className="font-medium text-navy-800">{task.label}</p>
+            </div>
+            {chDone ? <Badge tone="green"><Check className="h-3.5 w-3.5" /> Solved!</Badge> : <Badge tone="grey">Keep trying</Badge>}
+          </div>
+          <div className="mt-2 flex justify-end"><Button size="sm" variant="outline" onClick={() => setChIdx((i) => (i + 1) % FRAC_TASKS.length)}>Next challenge</Button></div>
+        </div>
+      )}
+
+      <p className="mt-4 text-center text-sm text-navy-500">💡 {hint}</p>
     </EngineCard>
   );
 }
