@@ -3,6 +3,7 @@ import type { Resource } from "@/types";
 import { craFor, type CRA } from "@/lib/cra";
 import { simPreset } from "@/config/simPresets";
 import { GameCover } from "./GameCover";
+import { SimCover } from "./SimCover";
 
 // ==========================================================
 // ResourceCover — CRA-graded, per-topic scene illustrations.
@@ -33,7 +34,7 @@ const gradients: Record<string, [string, string]> = {
   hundredsquare: ["from-navy-500", "to-teal-700"], book: ["from-teal-500", "to-navy-700"],
 };
 
-function themeFor(r: Resource): string {
+export function themeFor(r: Resource): string {
   const p = simPreset(r.id);
   const c = r.cover;
   if (/hundred-square/.test(r.id)) return "hundredsquare";
@@ -315,9 +316,10 @@ export function ResourceCover({
   seed?: string;
 }) {
   void size; void cover; void type; void seed;
-  // Games get a mini-mockup of their real play screen so the thumbnail
-  // matches the page it opens.
+  // Games and simulations get a mini-mockup of their real page so the
+  // thumbnail matches the activity it opens.
   if (resource?.type === "game") return <GameCover resource={resource} className={className} />;
+  if (resource?.type === "simulation") return <SimCover resource={resource} className={className} />;
   const theme = resource ? themeFor(resource) : "count";
   const cra: CRA = resource ? craFor(resource) : "pictorial";
   const s = resource ? seedNum(resource.id) : 0;
