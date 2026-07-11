@@ -203,9 +203,35 @@ function scene(id: string): React.ReactNode {
         }))}
       </g>;
     }
+    // ---- multiplayer split-screen covers (2×2 zones + topic icon) ----
+    case "res-mp-fill-it-up":
+    case "res-mp-stop-length":
+    case "res-mp-probability-arena":
+    case "res-mp-data-duel":
+      return mpScene(id);
     default:
       return <g>{dots(5, 160, 100, TEAL)}</g>;
   }
+}
+
+const PCOL = [TEAL, ROSE, ORANGE, INDIGO];
+function mpScene(id: string): React.ReactNode {
+  const zones = [[6, 34], [162, 34], [6, 108], [162, 108]] as const; // x,y of 4 quadrants
+  const zw = 152, zh = 66;
+  const icon = (kind: string, cx: number, cy: number, col: string) => {
+    if (kind === "cap") return <g><rect x={cx - 9} y={cy - 14} width={18} height={26} rx={3} fill="#eef6ff" stroke={col} strokeWidth={2} /><rect x={cx - 8} y={cy - 2} width={16} height={13} rx={2} fill={col} opacity={0.85} /><line x1={cx - 9} y1={cy} x2={cx - 4} y2={cy} stroke={col} strokeWidth={1.5} /></g>;
+    if (kind === "len") return <g><rect x={cx - 26} y={cy + 2} width={52} height={8} rx={2} fill="#fff5e0" stroke={col} strokeWidth={1} />{[0, 1, 2, 3, 4].map((i) => <line key={i} x1={cx - 26 + i * 13} y1={cy + 2} x2={cx - 26 + i * 13} y2={cy + 6} stroke={col} strokeWidth={1} />)}<rect x={cx - 26} y={cy - 6} width={30} height={7} rx={2} fill={col} /></g>;
+    if (kind === "prob") return <g>{[0, 1, 2, 3].map((i) => { const a0 = (i / 4) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / 4) * 2 * Math.PI - Math.PI / 2, r = 15; return <path key={i} d={`M${cx} ${cy} L${cx + r * Math.cos(a0)} ${cy + r * Math.sin(a0)} A${r} ${r} 0 0 1 ${cx + r * Math.cos(a1)} ${cy + r * Math.sin(a1)} Z`} fill={PCOL[i]} stroke="#fff" strokeWidth={1.5} />; })}<circle cx={cx} cy={cy} r={3} fill={NAVY} /></g>;
+    return <g>{[10, 18, 8].map((h, i) => <rect key={i} x={cx - 18 + i * 13} y={cy + 12 - h} width={9} height={h} rx={1.5} fill={col} />)}</g>;
+  };
+  const kind = id === "res-mp-fill-it-up" ? "cap" : id === "res-mp-stop-length" ? "len" : id === "res-mp-probability-arena" ? "prob" : "data";
+  return <g>
+    {zones.map(([x, y], i) => <g key={i}>
+      <rect x={x} y={y} width={zw} height={zh} rx={8} fill={i % 2 === 0 ? "#f6f9ff" : "#fff"} stroke={PCOL[i]} strokeWidth={2.5} />
+      <circle cx={x + 12} cy={y + 12} r={7} fill={PCOL[i]} /><T x={x + 12} y={y + 12} t={`${i + 1}`} s={9} />
+      {icon(kind, x + zw / 2 + 6, y + zh / 2 + 2, PCOL[i])}
+    </g>)}
+  </g>;
 }
 
 const PROMPT: Record<string, React.ReactNode> = {
@@ -223,6 +249,10 @@ const PROMPT: Record<string, React.ReactNode> = {
   "res-money-shop": "Pay exactly 24p",
   "res-data-graph-challenge": "Sort the fruit",
   "res-problem-solving-mission": "Reach the flag",
+  "res-mp-fill-it-up": "Fill It Up · 2–4 players",
+  "res-mp-stop-length": "Ruler Race · 2–4 players",
+  "res-mp-probability-arena": "Predict & Spin · 2–4 players",
+  "res-mp-data-duel": "Data Duel · 2–4 players",
 };
 
 export function GameCover({ resource, className }: { resource: Resource; className?: string }) {

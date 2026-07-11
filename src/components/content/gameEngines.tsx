@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
 import { gradeRank } from "@/lib/cra";
 import { PresentStage } from "./PresentStage";
+import { MultiplayerGame, MULTIPLAYER_IDS } from "./multiplayerEngines";
 
 // ==========================================================
 // MathQuest Games — real game-genre engines. The mathematical
@@ -107,6 +108,7 @@ export function GameEngine({ resource }: { resource: Resource }) {
 }
 
 function GameBody({ resource }: { resource: Resource }) {
+  if (MULTIPLAYER_IDS.includes(resource.id)) return <MultiplayerGame resource={resource} />;
   switch (resource.id) {
     case "res-counting-objects": return <CatchGame resource={resource} mode="count" />;
     case "res-compare-quantities": return <CatchGame resource={resource} mode="compare" />;
