@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Eduversal MathQuest">
+  <defs>
+    <linearGradient id="mq-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1b2540"/>
+      <stop offset="1" stop-color="#31415f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#mq-bg)"/>
+  <!-- faint maths grid -->
+  <g stroke="#ffffff" stroke-opacity="0.08" stroke-width="1">
+    <path d="M16 4V60M32 4V60M48 4V60M4 16H60M4 32H60M4 48H60"/>
+  </g>
+  <!-- number-line baseline with ticks -->
+  <g stroke="#65d6ad" stroke-width="2.5" stroke-linecap="round">
+    <path d="M14 47H50"/>
+    <path d="M20 43.5V50.5M32 43.5V50.5M44 43.5V50.5"/>
+  </g>
+  <!-- plus / quest node -->
+  <path d="M32 14V34M22 24H42" stroke="#ffb420" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="32" cy="24" r="4" fill="#27ab83" stroke="#ffffff" stroke-width="2"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg width="340" height="72" viewBox="0 0 340 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Eduversal MathQuest">
+  <defs>
+    <linearGradient id="mq-bg" x1="8" y1="8" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1b2540"/>
+      <stop offset="1" stop-color="#31415f"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark -->
+  <g transform="translate(8 8)">
+    <rect width="56" height="56" rx="14" fill="url(#mq-bg)"/>
+    <g stroke="#ffffff" stroke-opacity="0.08" stroke-width="1">
+      <path d="M14 3.5V52.5M28 3.5V52.5M42 3.5V52.5M3.5 14H52.5M3.5 28H52.5M3.5 42H52.5"/>
+    </g>
+    <g stroke="#65d6ad" stroke-width="2.2" stroke-linecap="round">
+      <path d="M12 41H44"/>
+      <path d="M17.5 38V44M28 38V44M38.5 38V44"/>
+    </g>
+    <path d="M28 12V30M19 21H37" stroke="#ffb420" stroke-width="4.4" stroke-linecap="round"/>
+    <circle cx="28" cy="21" r="3.6" fill="#27ab83" stroke="#ffffff" stroke-width="1.8"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="80" y="38" font-family="'Poppins','Segoe UI',system-ui,sans-serif" font-size="22" font-weight="700" letter-spacing="-0.5">
+    <tspan fill="#1b2540">Eduversal </tspan><tspan fill="#199473">MathQuest</tspan>
+  </text>
+  <text x="80.5" y="56" font-family="'Inter','Segoe UI',system-ui,sans-serif" font-size="11" font-weight="500" letter-spacing="0.2" fill="#6a80a9">Play. Explore. Master Maths.</text>
+</svg>

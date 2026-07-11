@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Poppins", var(--font-sans);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-surface-soft text-navy-900;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  /* Visible focus ring for keyboard users */
+  :focus-visible {
+    @apply outline-none ring-2 ring-teal-500 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .math-grid {
+    background-image:
+      linear-gradient(to right, rgba(15, 23, 41, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 41, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Recharts tooltip polish */
+.recharts-default-tooltip {
+  border-radius: 0.75rem !important;
+  border: 1px solid #e5e9f0 !important;
+  box-shadow: 0 8px 24px -12px rgba(15, 23, 41, 0.25) !important;
+}
