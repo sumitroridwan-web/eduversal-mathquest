@@ -225,8 +225,16 @@ function Scene({ theme, cra, seed, pid }: { theme: string; cra: CRA; seed: numbe
       return <g><g><ellipse cx={cx - 18} cy={cy - 8} rx={16} ry={12} fill={wl} stroke={W} strokeWidth={2} /><ellipse cx={cx - 14} cy={cy + 14} rx={11} ry={9} fill={wl} stroke={W} strokeWidth={2} /></g><g><ellipse cx={cx + 18} cy={cy - 8} rx={16} ry={12} fill={wr} stroke={W} strokeWidth={2} /><ellipse cx={cx + 14} cy={cy + 14} rx={11} ry={9} fill={wr} stroke={W} strokeWidth={2} /></g><path d={`M${cx} ${cy - 30} v60`} stroke={W} strokeWidth={2} strokeDasharray="5 5" /></g>;
     }
     case "shape": {
-      const c1 = [TEAL, ROSE, "#6366f1"][seed % 3], c2 = [ACC, TEAL, ACCD][(seed >> 2) % 3], extra = seed % 2;
-      return <g><circle cx={cx - 42} cy={cy} r={19} fill={c1} stroke={W} strokeWidth={2.5} /><path d={`M${cx} ${cy + 20} l20 -38 l20 38 z`} fill={c2} stroke={W} strokeWidth={2.5} /><rect x={cx - 18} y={cy - 18} width={36} height={36} rx={4} fill={W} opacity={0.9} stroke={W} strokeWidth={2.5} />{extra ? <path transform={`translate(${cx + 54} ${cy - 22}) scale(1.4)`} d="M0 -9 L2.6 -2.8 L9 -2.8 L3.9 1.1 L5.6 7.3 L0 3.6 L-5.6 7.3 L-3.9 1.1 L-9 -2.8 L-2.6 -2.8 Z" fill={ACC} stroke={W} strokeWidth={0.8} /> : null}</g>;
+      const c1 = [TEAL, ROSE, "#6366f1"][seed % 3], c2 = [ACC, TEAL, ACCD][(seed >> 2) % 3];
+      const kinds = seed % 2 ? ["circle", "square", "triangle", "star"] : ["circle", "square", "triangle"];
+      const n = kinds.length, gap = 48, sx = cx - ((n - 1) * gap) / 2;
+      const draw = (k: string, x: number) => {
+        if (k === "circle") return <circle cx={x} cy={cy} r={18} fill={c1} stroke={W} strokeWidth={2.5} />;
+        if (k === "square") return <rect x={x - 16} y={cy - 16} width={32} height={32} rx={4} fill={c2} stroke={W} strokeWidth={2.5} />;
+        if (k === "triangle") return <path d={`M${x} ${cy - 18} l17 34 h-34 z`} fill={W} opacity={0.92} stroke={W} strokeWidth={2.5} />;
+        return <path transform={`translate(${x} ${cy}) scale(2)`} d="M0 -9 L2.6 -2.8 L9 -2.8 L3.9 1.1 L5.6 7.3 L0 3.6 L-5.6 7.3 L-3.9 1.1 L-9 -2.8 L-2.6 -2.8 Z" fill={ACC} stroke={W} strokeWidth={0.8} />;
+      };
+      return <g>{kinds.map((k, i) => <g key={i}>{draw(k, sx + i * gap)}</g>)}</g>;
     }
     case "sort":
       return <g><ellipse cx={cx - 42} cy={cy} rx={40} ry={30} fill="none" stroke={W} strokeWidth={2} strokeOpacity={0.6} /><ellipse cx={cx + 42} cy={cy} rx={40} ry={30} fill="none" stroke={W} strokeWidth={2} strokeOpacity={0.6} /><circle cx={cx - 50} cy={cy} r={12} fill={TEAL} stroke={W} strokeWidth={2} /><circle cx={cx - 30} cy={cy + 8} r={10} fill={TEAL} stroke={W} strokeWidth={2} /><rect x={cx + 30} y={cy - 12} width={22} height={22} rx={3} fill={ACC} stroke={W} strokeWidth={2} /><path d={`M${cx + 44} ${cy + 14} l12 -22 l12 22 z`} fill={ACC} stroke={W} strokeWidth={2} transform={`translate(-18 0)`} /></g>;
@@ -266,8 +274,10 @@ function Scene({ theme, cra, seed, pid }: { theme: string; cra: CRA; seed: numbe
       const ax = cx + len * Math.cos(Math.PI - rad), ay = by - len * Math.sin(Math.PI - rad);
       return <g><line x1={cx - 52} y1={by} x2={cx + 52} y2={by} stroke={W} strokeWidth={3} strokeLinecap="round" /><line x1={cx} y1={by} x2={ax} y2={ay} stroke={ACC} strokeWidth={3} strokeLinecap="round" /><path d={`M${cx + 24} ${by} A24 24 0 0 0 ${cx + 24 * Math.cos(rad)} ${by - 24 * Math.sin(rad)}`} fill="none" stroke={W} strokeWidth={2} /><Num x={cx + 8} y={cy - 26} t={`${ang}°`} s={15} /></g>;
     }
-    case "orderops":
-      return <g><Num x={cx} y={cy} t="2 + 3 × 4" s={30} /><rect x={cx - 46} y={cy - 20} width={44} height={40} rx={6} fill="none" stroke={ACC} strokeWidth={2.5} /></g>;
+    case "orderops": {
+      const xs = [cx - 64, cx - 32, cx, cx + 32, cx + 64], toks = ["2", "+", "3", "×", "4"];
+      return <g><rect x={cx - 84} y={cy - 22} width={100} height={44} rx={9} fill={ACC} fillOpacity={0.18} stroke={ACC} strokeWidth={2.5} />{toks.map((t, i) => <Num key={i} x={xs[i]} y={cy} t={t} s={28} />)}</g>;
+    }
     case "mission":
       return <g><circle cx={cx} cy={cy} r={38} fill={W} opacity={0.16} stroke={W} strokeWidth={3} /><path d={`M${cx} ${cy - 28} l11 28 l-11 7 l-11 -7 z`} fill={ACC} /><path d={`M${cx} ${cy + 28} l11 -21 l-11 -7 l-11 7 z`} fill={W} opacity={0.85} /><circle cx={cx} cy={cy} r={4} fill={NAVY} /></g>;
     case "magnifier":
