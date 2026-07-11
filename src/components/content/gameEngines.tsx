@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { RotateCcw, Heart, Trophy, Play, Star, Coins } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { RotateCcw, Heart, Trophy, Play, Star, Coins, Volume2, VolumeX } from "lucide-react";
 import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
@@ -12,13 +12,98 @@ import { gradeRank } from "@/lib/cra";
 // action IS the gameplay (no quiz). Interaction-driven (tap /
 // drag / steer), CSS motion, immediate feedback, score / lives /
 // stars / win state, keyboard + touch friendly.
+//
+// Shared across every game: a difficulty selector (Easy / Normal /
+// Hard) that shifts the effective grade, and a CSP-safe Web Audio
+// sound engine (synthesised tones, no asset files) with a mute
+// toggle. Both live in the GameFrame header and persist locally.
 // ==========================================================
 
 const rnd = (n: number) => Math.floor(Math.random() * n);
 function shuffle<T>(a: T[]): T[] { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = rnd(i + 1); const t = b[i]; b[i] = b[j]; b[j] = t; } return b; }
 function distinct(count: number, max: number, min = 1): number[] { const s = new Set<number>(); let guard = 0; while (s.size < count && guard++ < 500) s.add(min + rnd(max - min + 1)); return [...s]; }
 
+// ---------------- sound (Web Audio, synthesised, no files) ----------------
+type Sfx = "good" | "bad" | "win" | "lose" | "tick" | "pop";
+let _ac: AudioContext | null = null;
+function audioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return null;
+    if (!_ac) _ac = new AC();
+    if (_ac.state === "suspended") void _ac.resume();
+    return _ac;
+  } catch { return null; }
+}
+function tone(freq: number, start: number, dur: number, type: OscillatorType = "sine", gain = 0.14) {
+  const c = audioCtx(); if (!c) return;
+  const t0 = c.currentTime + start;
+  const osc = c.createOscillator(); const g = c.createGain();
+  osc.type = type; osc.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(g); g.connect(c.destination);
+  osc.start(t0); osc.stop(t0 + dur + 0.03);
+}
+function playSfx(name: Sfx) {
+  switch (name) {
+    case "good": tone(660, 0, 0.12, "triangle"); tone(990, 0.08, 0.14, "triangle"); break;
+    case "pop": tone(520, 0, 0.09, "square", 0.1); break;
+    case "tick": tone(320, 0, 0.05, "square", 0.07); break;
+    case "bad": tone(180, 0, 0.2, "sawtooth", 0.11); break;
+    case "win": [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.22, "triangle")); break;
+    case "lose": [392, 311, 247].forEach((f, i) => tone(f, i * 0.14, 0.26, "sawtooth", 0.11)); break;
+  }
+}
+
+// ---------------- shared settings context ----------------
+type Diff = "easy" | "normal" | "hard";
+const DIFF_OFFSET: Record<Diff, number> = { easy: -2, normal: 0, hard: 2 };
+const DIFF_LABEL: Record<Diff, string> = { easy: "Easy", normal: "Normal", hard: "Hard" };
+
+type GameSettings = { diff: Diff; setDiff: (d: Diff) => void; muted: boolean; setMuted: (m: boolean) => void; sfx: (n: Sfx) => void };
+const GameCtx = createContext<GameSettings | null>(null);
+function useGame(): GameSettings {
+  const v = useContext(GameCtx);
+  if (!v) throw new Error("useGame must be used inside GameEngine");
+  return v;
+}
+/** Effective grade rank after applying the chosen difficulty (clamped to 0–8). */
+function useDiffGrade(resource: Resource): number {
+  const { diff } = useGame();
+  return clamp(gradeRank(resource) + DIFF_OFFSET[diff], 0, 8);
+}
+
 export function GameEngine({ resource }: { resource: Resource }) {
+  const [diff, setDiff] = useState<Diff>("normal");
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  // load persisted preferences after mount (avoids SSR hydration mismatch)
+  useEffect(() => {
+    try {
+      const d = window.localStorage.getItem("mq-game-diff");
+      if (d === "easy" || d === "normal" || d === "hard") setDiff(d);
+      setMuted(window.localStorage.getItem("mq-game-muted") === "1");
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { try { window.localStorage.setItem("mq-game-diff", diff); } catch { /* ignore */ } }, [diff]);
+  useEffect(() => { try { window.localStorage.setItem("mq-game-muted", muted ? "1" : "0"); } catch { /* ignore */ } }, [muted]);
+
+  const sfx = useCallback((n: Sfx) => { if (!mutedRef.current) playSfx(n); }, []);
+  const value = useMemo<GameSettings>(() => ({ diff, setDiff, muted, setMuted, sfx }), [diff, muted, sfx]);
+
+  return (
+    <GameCtx.Provider value={value}>
+      <GameBody resource={resource} />
+    </GameCtx.Provider>
+  );
+}
+
+function GameBody({ resource }: { resource: Resource }) {
   switch (resource.id) {
     case "res-counting-objects": return <CatchGame resource={resource} mode="count" />;
     case "res-compare-quantities": return <CatchGame resource={resource} mode="compare" />;
@@ -39,14 +124,41 @@ export function GameEngine({ resource }: { resource: Resource }) {
 }
 
 // ---------------- shared shell ----------------
+function DiffPicker() {
+  const { diff, setDiff } = useGame();
+  return (
+    <div className="inline-flex overflow-hidden rounded-lg ring-1 ring-white/25" role="group" aria-label="Difficulty">
+      {(["easy", "normal", "hard"] as Diff[]).map((d) => (
+        <button key={d} onClick={() => setDiff(d)} aria-pressed={diff === d}
+          className={cn("px-2 py-1 text-xs font-semibold transition-colors", diff === d ? "bg-accent-400 text-navy-900" : "bg-white/10 text-white/70 hover:bg-white/20")}>
+          {DIFF_LABEL[d]}
+        </button>
+      ))}
+    </div>
+  );
+}
+function MuteButton() {
+  const { muted, setMuted, sfx } = useGame();
+  return (
+    <button onClick={() => { const next = !muted; setMuted(next); if (!next) sfx("pop"); }} aria-label={muted ? "Unmute" : "Mute"} aria-pressed={muted}
+      className="rounded-lg bg-white/15 p-1.5 hover:bg-white/25">
+      {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+    </button>
+  );
+}
 function GameFrame({ instruction, stats, onRestart, over, overText, overWin, children }: {
   instruction: React.ReactNode; stats: React.ReactNode; onRestart: () => void; over: boolean; overText: React.ReactNode; overWin: boolean; children: React.ReactNode;
 }) {
+  const { sfx } = useGame();
+  // Centralised win / lose stinger — every engine gets it for free.
+  useEffect(() => { if (over) sfx(overWin ? "win" : "lose"); }, [over, overWin, sfx]);
   return (
     <div className="overflow-hidden rounded-2xl border-2 border-navy-100 shadow-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-navy-900 px-4 py-2.5 text-white">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-navy-900 px-4 py-2.5 text-white">
         <p className="text-sm font-semibold sm:text-base">{instruction}</p>
-        <div className="flex items-center gap-3 text-sm">{stats}
+        <div className="flex flex-wrap items-center gap-2.5 text-sm">{stats}
+          <DiffPicker />
+          <MuteButton />
           <button onClick={onRestart} className="rounded-lg bg-white/15 p-1.5 hover:bg-white/25" aria-label="Restart"><RotateCcw className="h-4 w-4" /></button>
         </div>
       </div>
@@ -84,7 +196,8 @@ function useKeys(handler: (k: string) => void) {
 
 // ================= 1. CATCHER (count / compare / number) =================
 function CatchGame({ resource, mode }: { resource: Resource; mode: "count" | "compare" | "number" }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const maxN = mode === "number" ? (g <= 3 ? 20 : 100) : (g <= 1 ? 5 : 9);
   const GOAL = 8;
   const newRound = () => {
@@ -106,7 +219,7 @@ function CatchGame({ resource, mode }: { resource: Resource; mode: "count" | "co
     setDrop(true);
     window.setTimeout(() => {
       const caught = round.lanes[basket];
-      if (caught.correct) { setScore((s) => s + 1); setFlash(basket); } else setLives((l) => l - 1);
+      if (caught.correct) { setScore((s) => s + 1); setFlash(basket); sfx("good"); } else { setLives((l) => l - 1); sfx("bad"); }
       window.setTimeout(() => { setDrop(false); setFlash(null); setBasket(1); setRound(newRound()); }, 550);
     }, 600);
   };
@@ -139,8 +252,9 @@ function CatchGame({ resource, mode }: { resource: Resource; mode: "count" | "co
 
 // ================= 2. MEMORY MATCH (numeral ↔ dots) =================
 function MemoryMatch({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
-  const pairs = g <= 1 ? 4 : 5;
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
+  const pairs = g <= 1 ? 4 : g >= 4 ? 6 : 5;
   const build = () => {
     const nums = shuffle(Array.from({ length: 9 }, (_, i) => i + 1)).slice(0, pairs);
     const cards = shuffle(nums.flatMap((n) => [{ id: `${n}-a`, n, kind: "num" as const }, { id: `${n}-b`, n, kind: "dot" as const }]));
@@ -156,11 +270,12 @@ function MemoryMatch({ resource }: { resource: Resource }) {
     if (up.length === 2 || up.includes(id) || done.includes(n)) return;
     const nu = [...up, id];
     setUp(nu);
+    sfx("tick");
     if (nu.length === 2) {
       setMoves((m) => m + 1);
       const [a, b] = nu;
       const na = cards.find((c) => c.id === a)!.n, nb = cards.find((c) => c.id === b)!.n;
-      window.setTimeout(() => { if (na === nb) setDone((d) => [...d, na]); setUp([]); }, 700);
+      window.setTimeout(() => { if (na === nb) { setDone((d) => [...d, na]); sfx("good"); } else sfx("bad"); setUp([]); }, 700);
     }
   };
   const restart = () => { setCards(build()); setUp([]); setDone([]); setMoves(0); };
@@ -195,7 +310,8 @@ const SHAPES = [
 ];
 const SH_COLORS = ["#14b8a6", "#f59e0b", "#6366f1", "#f43f5e", "#22c55e"];
 function ShapeShooter({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const kinds = g <= 1 ? 3 : g <= 3 ? 4 : 6;
   const newWave = () => {
     const target = SHAPES[rnd(kinds)];
@@ -217,8 +333,8 @@ function ShapeShooter({ resource }: { resource: Resource }) {
     setWave((w) => {
       const it = w.items.find((x) => x.id === id)!;
       if (it.hit) return w;
-      if (it.s.k === w.target.k) { setScore((s) => s + 1); return { ...w, items: w.items.map((x) => x.id === id ? { ...x, hit: true } : x) }; }
-      setLives((l) => l - 1); return { ...w, items: w.items.map((x) => x.id === id ? { ...x, hit: true } : x) };
+      if (it.s.k === w.target.k) { setScore((s) => s + 1); sfx("pop"); return { ...w, items: w.items.map((x) => x.id === id ? { ...x, hit: true } : x) }; }
+      setLives((l) => l - 1); sfx("bad"); return { ...w, items: w.items.map((x) => x.id === id ? { ...x, hit: true } : x) };
     });
   };
   const restart = () => { setScore(0); setLives(3); setLevel(1); setWave(newWave()); };
@@ -240,7 +356,8 @@ function ShapeShooter({ resource }: { resource: Resource }) {
 // ================= 4. PATTERN CONVEYOR =================
 const PAT_COLORS = ["#14b8a6", "#f59e0b", "#6366f1", "#f43f5e"];
 function PatternGame({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const GOAL = 6;
   const newRound = () => {
     const unitLen = g <= 1 ? 2 : 2 + rnd(2); // 2 or 3
@@ -258,8 +375,8 @@ function PatternGame({ resource }: { resource: Resource }) {
   const won = score >= GOAL, lost = lives <= 0, over = won || lost;
   const pick = (k: number) => {
     if (over) return;
-    if (k === round.answer) { setScore((s) => s + 1); setWrong(null); window.setTimeout(() => setRound(newRound()), 250); }
-    else { setLives((l) => l - 1); setWrong(k); window.setTimeout(() => setWrong(null), 500); }
+    if (k === round.answer) { setScore((s) => s + 1); setWrong(null); sfx("good"); window.setTimeout(() => setRound(newRound()), 250); }
+    else { setLives((l) => l - 1); setWrong(k); sfx("bad"); window.setTimeout(() => setWrong(null), 500); }
   };
   const Block = ({ k, size = 44 }: { k: number; size?: number }) => <span className="inline-block rounded-lg shadow-sm ring-2 ring-white" style={{ width: size, height: size, background: PAT_COLORS[k] }} />;
   const restart = () => { setScore(0); setLives(3); setWrong(null); setRound(newRound()); };
@@ -284,7 +401,8 @@ function PatternGame({ resource }: { resource: Resource }) {
 
 // ================= 5. TUG OF WAR (addition) =================
 function TugOfWar({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const maxSum = g <= 3 ? 20 : 50;
   const newTarget = () => 6 + rnd(maxSum - 6);
   const [target, setTarget] = useState(newTarget);
@@ -297,9 +415,9 @@ function TugOfWar({ resource }: { resource: Resource }) {
   const tap = (v: number) => {
     if (over) return;
     const ns = sum + v;
-    if (ns === target) { setRope((r) => clamp(r + 14, 0, 100)); setFlash("pull"); setSum(0); setPicked([]); setTarget(newTarget()); window.setTimeout(() => setFlash(null), 400); }
-    else if (ns > target) { setRope((r) => clamp(r - 10, 0, 100)); setFlash("lose"); setSum(0); setPicked([]); window.setTimeout(() => setFlash(null), 400); }
-    else { setSum(ns); setPicked((p) => [...p, v]); }
+    if (ns === target) { setRope((r) => clamp(r + 14, 0, 100)); setFlash("pull"); setSum(0); setPicked([]); setTarget(newTarget()); sfx("good"); window.setTimeout(() => setFlash(null), 400); }
+    else if (ns > target) { setRope((r) => clamp(r - 10, 0, 100)); setFlash("lose"); setSum(0); setPicked([]); sfx("bad"); window.setTimeout(() => setFlash(null), 400); }
+    else { setSum(ns); setPicked((p) => [...p, v]); sfx("tick"); }
   };
   const restart = () => { setRope(50); setSum(0); setPicked([]); setTarget(newTarget()); setFlash(null); };
   return (
@@ -328,7 +446,8 @@ function TugOfWar({ resource }: { resource: Resource }) {
 
 // ================= 6. NUMBER-LINE HOP (subtraction) =================
 function HopGame({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const max = g <= 3 ? 20 : 30;
   const [start, setStart] = useState(() => 10 + rnd(max - 10));
   const [pos, setPos] = useState(start);
@@ -343,9 +462,9 @@ function HopGame({ resource }: { resource: Resource }) {
     setHop(true);
     window.setTimeout(() => {
       setHop(false);
-      if (np === 0) { setLevel((l) => l + 1); const ns = 10 + rnd(max - 10); setStart(ns); setPos(ns); }
-      else if (np < 0) { setLives((l) => l - 1); setPos(start); }
-      else setPos(np);
+      if (np === 0) { setLevel((l) => l + 1); const ns = 10 + rnd(max - 10); setStart(ns); setPos(ns); sfx("good"); }
+      else if (np < 0) { setLives((l) => l - 1); setPos(start); sfx("bad"); }
+      else { setPos(np); sfx("tick"); }
     }, 350);
   };
   const restart = () => { const ns = 10 + rnd(max - 10); setStart(ns); setPos(ns); setLevel(1); setLives(3); };
@@ -376,7 +495,8 @@ function HopGame({ resource }: { resource: Resource }) {
 
 // ================= 7. PLACE-VALUE STACKER =================
 function StackGame({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const digits = g >= 6 ? 4 : 3;
   const target0 = () => rnd(digits === 4 ? 9000 : 900) + (digits === 4 ? 1000 : 100);
   const [target, setTarget] = useState(target0);
@@ -385,6 +505,7 @@ function StackGame({ resource }: { resource: Resource }) {
   const value = th * 1000 + h * 100 + t * 10 + o;
   const won = level > 5, over = won;
   const launched = value === target;
+  useEffect(() => { if (launched && !won) sfx("good"); }, [launched, won, sfx]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (launched && !won) { const tm = window.setTimeout(() => { setLevel((l) => l + 1); setTarget(target0()); setTh(0); setH(0); setT(0); setO(0); }, 900); return () => clearTimeout(tm); } }, [launched, won]);
   const restart = () => { setLevel(1); setTarget(target0()); setTh(0); setH(0); setT(0); setO(0); };
@@ -395,8 +516,8 @@ function StackGame({ resource }: { resource: Resource }) {
         {Array.from({ length: n }).map((_, i) => <span key={i} className="w-full shrink-0 rounded-sm" style={{ height: 8, background: color }} />)}
       </div>
       <div className="flex gap-1">
-        <button onClick={() => set((x) => Math.max(0, x - 1))} className="h-7 w-7 rounded-lg border border-navy-200 font-bold text-navy-600">−</button>
-        <button onClick={() => set((x) => Math.min(digits === 4 && label === "Th" ? 9 : 12, x + 1))} className="h-7 w-7 rounded-lg border border-navy-200 font-bold text-navy-600">+</button>
+        <button onClick={() => { set((x) => Math.max(0, x - 1)); sfx("tick"); }} className="h-7 w-7 rounded-lg border border-navy-200 font-bold text-navy-600">−</button>
+        <button onClick={() => { set((x) => Math.min(digits === 4 && label === "Th" ? 9 : 12, x + 1)); sfx("tick"); }} className="h-7 w-7 rounded-lg border border-navy-200 font-bold text-navy-600">+</button>
       </div>
     </div>
   );
@@ -421,8 +542,11 @@ function StackGame({ resource }: { resource: Resource }) {
 
 // ================= 8. ARRAY-BLAST DEFENCE (times tables) =================
 function ArrayDefense({ resource }: { resource: Resource }) {
-  const tables = [2, 5, 10];
-  const newWave = () => { const c = tables[rnd(tables.length)]; const r = 2 + rnd(4); return { rows: r, cols: c }; };
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
+  const tables = g <= 2 ? [2, 5, 10] : g <= 4 ? [2, 3, 5, 10] : [2, 3, 4, 5, 10];
+  const rowMax = g <= 2 ? 3 : 5;
+  const newWave = () => { const c = tables[rnd(tables.length)]; const r = 2 + rnd(rowMax); return { rows: r, cols: c }; };
   const [wave, setWave] = useState(newWave);
   const [rows, setRows] = useState(1); const [cols, setCols] = useState(1);
   const [level, setLevel] = useState(1); const [lives, setLives] = useState(3);
@@ -431,9 +555,9 @@ function ArrayDefense({ resource }: { resource: Resource }) {
   const fire = () => {
     if (over || blasting) return;
     if (rows === wave.rows && cols === wave.cols) {
-      setBlasting(true);
+      setBlasting(true); sfx("good");
       window.setTimeout(() => { setBlasting(false); setLevel((l) => l + 1); setWave(newWave()); setRows(1); setCols(1); }, 500);
-    } else setLives((l) => l - 1);
+    } else { setLives((l) => l - 1); sfx("bad"); }
   };
   const restart = () => { setWave(newWave()); setRows(1); setCols(1); setLevel(1); setLives(3); };
   return (
@@ -459,7 +583,8 @@ function ArrayDefense({ resource }: { resource: Resource }) {
 
 // ================= 9. PIZZA SHOP (fractions) =================
 function PizzaGame({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const dens = g <= 4 ? [2, 3, 4] : [2, 3, 4, 6, 8];
   const GOAL = 6;
   const newOrder = () => { const d = dens[rnd(dens.length)]; const n = 1 + rnd(d - 1); return { n, d }; };
@@ -470,11 +595,11 @@ function PizzaGame({ resource }: { resource: Resource }) {
   const [served, setServed] = useState(0);
   const count = filled.filter(Boolean).length;
   const won = served >= GOAL, lost = lives <= 0, over = won || lost;
-  const toggle = (i: number) => { if (over) return; setFilled((f) => f.map((v, j) => j === i ? !v : v)); };
+  const toggle = (i: number) => { if (over) return; setFilled((f) => f.map((v, j) => j === i ? !v : v)); sfx("pop"); };
   const serve = () => {
     if (over) return;
-    if (count === order.n) { setCoins((c) => c + 10); setServed((s) => s + 1); }
-    else setLives((l) => l - 1);
+    if (count === order.n) { setCoins((c) => c + 10); setServed((s) => s + 1); sfx("good"); }
+    else { setLives((l) => l - 1); sfx("bad"); }
     const o = newOrder(); setOrder(o); setFilled(Array(o.d).fill(false));
   };
   const restart = () => { const o = newOrder(); setOrder(o); setFilled(Array(o.d).fill(false)); setCoins(0); setLives(3); setServed(0); };
@@ -503,8 +628,11 @@ function PizzaGame({ resource }: { resource: Resource }) {
 // ================= 10. COIN SHOP (money) =================
 const COINS = [1, 2, 5, 10, 20, 50];
 function CoinGame({ resource }: { resource: Resource }) {
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const GOAL = 6;
-  const newPrice = () => 3 + rnd(47);
+  const maxPrice = g <= 2 ? 20 : g <= 4 ? 50 : 99;
+  const newPrice = () => 3 + rnd(maxPrice - 2);
   const [price, setPrice] = useState(newPrice);
   const [paid, setPaid] = useState(0);
   const [coins, setCoins] = useState(0);
@@ -512,11 +640,11 @@ function CoinGame({ resource }: { resource: Resource }) {
   const [served, setServed] = useState(0);
   const won = served >= GOAL, lost = lives <= 0, over = won || lost;
   const fmt = (p: number) => `${p}p`;
-  const add = (c: number) => { if (over) return; setPaid((x) => x + c); };
+  const add = (c: number) => { if (over) return; setPaid((x) => x + c); sfx("tick"); };
   const sell = () => {
     if (over) return;
-    if (paid === price) { setCoins((c) => c + 5); setServed((s) => s + 1); setPrice(newPrice()); setPaid(0); }
-    else setLives((l) => l - 1);
+    if (paid === price) { setCoins((c) => c + 5); setServed((s) => s + 1); setPrice(newPrice()); setPaid(0); sfx("good"); }
+    else { setLives((l) => l - 1); sfx("bad"); }
   };
   const restart = () => { setPrice(newPrice()); setPaid(0); setCoins(0); setLives(3); setServed(0); };
   return (
@@ -542,7 +670,10 @@ function CoinGame({ resource }: { resource: Resource }) {
 // ================= 11. DATA SORT (data handling) =================
 const SORT_ITEMS = [{ e: "🍎", k: "apple" }, { e: "🍌", k: "banana" }, { e: "🍇", k: "grape" }];
 function DataSortGame({ resource }: { resource: Resource }) {
-  const build = () => shuffle(Array.from({ length: 9 }, () => SORT_ITEMS[rnd(SORT_ITEMS.length)]));
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
+  const qlen = g <= 2 ? 6 : g <= 4 ? 9 : 12;
+  const build = () => shuffle(Array.from({ length: qlen }, () => SORT_ITEMS[rnd(SORT_ITEMS.length)]));
   const [queue, setQueue] = useState(build);
   const [bins, setBins] = useState<Record<string, number>>({ apple: 0, banana: 0, grape: 0 });
   const [lives, setLives] = useState(3);
@@ -551,8 +682,8 @@ function DataSortGame({ resource }: { resource: Resource }) {
   const restart = () => { setQueue(build()); setBins({ apple: 0, banana: 0, grape: 0 }); setLives(3); };
   const sortTo = (k: string) => {
     if (done) return;
-    if (k === current.k) { setBins((b) => ({ ...b, [k]: b[k] + 1 })); setQueue((q) => q.slice(1)); }
-    else setLives((l) => l - 1);
+    if (k === current.k) { setBins((b) => ({ ...b, [k]: b[k] + 1 })); setQueue((q) => q.slice(1)); sfx("pop"); }
+    else { setLives((l) => l - 1); sfx("bad"); }
   };
   const lost = lives <= 0;
   const most = (Object.entries(bins).sort((a, b) => b[1] - a[1])[0] || ["", 0]);
@@ -583,7 +714,8 @@ const MAZES = [
   ["#######", "#S#...E", "#.#.#.#", "#...#.#", "###.#.#", "#...#.#", "#######"],
 ];
 function MazeGame({ resource }: { resource: Resource }) {
-  const g = gradeRank(resource);
+  const g = useDiffGrade(resource);
+  const { sfx } = useGame();
   const layout = MAZES[Math.min(g % MAZES.length, MAZES.length - 1)];
   const grid = layout.map((r) => r.split(""));
   const rows = grid.length, cols = grid[0].length;
@@ -601,7 +733,7 @@ function MazeGame({ resource }: { resource: Resource }) {
     if (nx < 0 || ny < 0 || nx >= cols || ny >= rows || grid[ny][nx] === "#") return;
     setPos({ x: nx, y: ny }); setMoves((m) => m + 1);
     const coin = coinCells.find((c) => c.x === nx && c.y === ny && c.n === next);
-    if (coin) setNext((n) => n + 1);
+    if (coin) { setNext((n) => n + 1); sfx("good"); } else sfx("tick");
   };
   useKeys((k) => { if (k === "ArrowUp") move(0, -1); if (k === "ArrowDown") move(0, 1); if (k === "ArrowLeft") move(-1, 0); if (k === "ArrowRight") move(1, 0); });
   const restart = () => { setPos(findStart()); setNext(1); setMoves(0); };
