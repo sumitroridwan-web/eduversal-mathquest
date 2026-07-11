@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ResourceCover } from "@/components/content/ResourceCover";
+import { HeroScene } from "@/components/marketing/HeroScene";
 import { brand } from "@/config/brand";
 import { games, simulations, books } from "@/data/resources";
 import { stageLabel } from "@/lib/content";
@@ -88,22 +89,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Hero visual — floating resource cards */}
-          <div className="relative hidden lg:block">
-            <div className="grid grid-cols-2 gap-4">
-              {[games[6], simulations[0], books[0], games[10]].filter(Boolean).map((r, i) => (
-                <div
-                  key={r.id}
-                  className={`overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-card ${i % 2 ? "mt-8" : ""}`}
-                >
-                  <ResourceCover cover={r.cover} type={r.type} className="h-24 w-full" size="sm" />
-                  <div className="p-3">
-                    <p className="text-xs font-semibold text-navy-800">{r.title}</p>
-                    <p className="mt-0.5 text-[11px] text-navy-400">{stageLabel(r)} · {r.strand === "Early Mathematical Experiences" ? "Early Maths" : r.strand}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Interactive hero scene */}
+          <div className="relative mt-6 lg:mt-0">
+            <HeroScene />
           </div>
         </div>
       </section>
