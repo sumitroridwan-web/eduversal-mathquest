@@ -1,5 +1,6 @@
 import type { Resource } from "@/types";
 import { primarySimulations } from "./simulationsPrimary";
+import { earlyYearsSimulations } from "./simulationsEarlyYears";
 
 // ==========================================================
 // MathQuest content library — original Eduversal metadata.
@@ -1044,6 +1045,9 @@ export const resources: Resource[] = [
 
   // ---------------- CAMBRIDGE PRIMARY SIMULATIONS (Stages 1–6) ----------------
   ...primarySimulations,
+
+  // ---------------- CAMBRIDGE EARLY YEARS SIMULATIONS (EY1–EY3) ----------------
+  ...earlyYearsSimulations,
 ];
 
 // -------- Derived helpers --------

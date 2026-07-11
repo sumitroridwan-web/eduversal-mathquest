@@ -39,9 +39,11 @@ export function SimulationEngine({ resource }: { resource: Resource }) {
     case "shopping":
     case "money": return <MoneyEngine resource={resource} />;
     case "symmetry": return <SymmetryEngine resource={resource} />;
-    case "compare": return <RatioEngine resource={resource} />;
+    case "compare": return resource.programme === "early-years" ? <CompareEngine resource={resource} /> : <RatioEngine resource={resource} />;
     case "addition": return <OrderOpsEngine resource={resource} />;
     case "shapes": return <ShapeSortEngine resource={resource} />;
+    case "pattern":
+    case "patternmachine": return <PatternEngine resource={resource} />;
     default: return <TenFrameEngine resource={resource} />;
   }
 }
@@ -470,7 +472,7 @@ function FractionBarsEngine({ resource }: { resource: Resource }) {
 
 // ---------------- 6. Clock ----------------
 function ClockEngine({ resource }: { resource: Resource }) {
-  const oClockDefault = /s1-clock/.test(resource.id);
+  const oClockDefault = /s1-clock/.test(resource.id) || resource.programme === "early-years";
   const [precision, setPrecision] = useState(oClockDefault ? 30 : 5);
   const [showWords, setShowWords] = useState(true);
   const [hour, setHour] = useState(3);
@@ -970,6 +972,130 @@ function ShapeSortEngine({ resource }: { resource: Resource }) {
       {allPlaced && (
         <p className="mt-4 text-center text-sm font-semibold">
           {allCorrect ? <span className="text-emerald-600">✓ All sorted correctly!</span> : <span className="text-amber-600">Not quite — check your groups and try again.</span>}
+        </p>
+      )}
+    </EngineCard>
+  );
+}
+
+// ---------------- 16. Compare (more / fewer) — Early Years ----------------
+function CompareEngine({ resource }: { resource: Resource }) {
+  const [maxN, setMaxN] = useState(10);
+  const [showMatch, setShowMatch] = useState(true);
+  const [a, setA] = useState(5);
+  const [b, setB] = useState(3);
+  useEffect(() => { setA((x) => Math.min(x, maxN)); setB((x) => Math.min(x, maxN)); }, [maxN]);
+  const sym = a > b ? ">" : a < b ? "<" : "=";
+  const word = a > b ? "Group A has more" : a < b ? "Group A has fewer" : "The groups are equal";
+  const cols = Math.max(a, b, 1), lo = Math.min(a, b);
+
+  return (
+    <EngineCard hint={hintFor(resource)} onReset={() => { setA(5); setB(3); }}
+      settings={<>
+        <SettingRow label="Count up to">
+          <Segmented value={maxN} onChange={setMaxN} options={[{ label: "5", value: 5 }, { label: "10", value: 10 }]} />
+        </SettingRow>
+        <SettingRow label="Line up to match"><Toggle checked={showMatch} onChange={setShowMatch} /></SettingRow>
+      </>}
+    >
+      <p className="mb-3 text-sm text-navy-600">Change each group and compare. Which has more?</p>
+      {showMatch ? (
+        <div className="flex justify-center overflow-x-auto rounded-2xl bg-surface-soft p-4">
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, 1.75rem)` }}>
+            {Array.from({ length: cols }).map((_, i) => (
+              <span key={`a${i}`} className={cn("h-6 w-6 rounded-full", i < a ? "bg-teal-500" : "bg-transparent", i >= lo && i < a && "ring-2 ring-teal-300 ring-offset-1")} />
+            ))}
+            {Array.from({ length: cols }).map((_, i) => (
+              <span key={`b${i}`} className={cn("h-6 w-6 rounded-full", i < b ? "bg-accent-400" : "bg-transparent", i >= lo && i < b && "ring-2 ring-accent-300 ring-offset-1")} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 rounded-2xl bg-surface-soft p-4">
+          <div className="flex items-center gap-2"><span className="w-16 text-sm font-semibold text-teal-700">Group A</span><div className="flex flex-wrap gap-1.5">{Array.from({ length: a }).map((_, i) => <span key={i} className="h-6 w-6 rounded-full bg-teal-500" />)}</div></div>
+          <div className="flex items-center gap-2"><span className="w-16 text-sm font-semibold text-accent-700">Group B</span><div className="flex flex-wrap gap-1.5">{Array.from({ length: b }).map((_, i) => <span key={i} className="h-6 w-6 rounded-full bg-accent-400" />)}</div></div>
+        </div>
+      )}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <Stepper label="Group A" value={a} set={setA} min={0} max={maxN} />
+        <Stepper label="Group B" value={b} set={setB} min={0} max={maxN} />
+      </div>
+      <div className="mt-4 text-center">
+        <p className="font-display text-2xl font-bold text-navy-900">{a} {sym} {b}</p>
+        <p className="text-sm font-medium text-teal-700">{word}</p>
+      </div>
+    </EngineCard>
+  );
+}
+
+// ---------------- 17. Repeating patterns — Early Years ----------------
+const P_UNITS: Record<string, number[]> = { AB: [0, 1], ABC: [0, 1, 2], AAB: [0, 0, 1], ABB: [0, 1, 1] };
+function PatternToken({ kind, mode }: { kind: number; mode: string }) {
+  const color = ["#14b8a6", "#f59e0b", "#6366f1"][kind];
+  if (mode === "shapes") {
+    if (kind === 0) return <span className="h-8 w-8 rounded-full" style={{ background: "#14b8a6" }} />;
+    if (kind === 1) return <span className="h-8 w-8 rounded-md" style={{ background: "#14b8a6" }} />;
+    return <span className="h-0 w-0 border-x-[16px] border-b-[28px] border-x-transparent" style={{ borderBottomColor: "#14b8a6" }} />;
+  }
+  if (mode === "sizes") {
+    const s = [14, 22, 32][kind];
+    return <span className="rounded-full" style={{ width: s, height: s, background: "#14b8a6" }} />;
+  }
+  return <span className="h-8 w-8 rounded-full" style={{ background: color }} />;
+}
+function PatternEngine({ resource }: { resource: Resource }) {
+  const [unitKey, setUnitKey] = useState("AB");
+  const [mode, setMode] = useState("colours");
+  const unit = P_UNITS[unitKey];
+  const total = unit.length * 3;
+  const full = Array.from({ length: total }, (_, i) => unit[i % unit.length]);
+  const givenCount = total - unit.length;
+  const hidden = total - givenCount;
+  const [filled, setFilled] = useState<number[]>([]);
+  useEffect(() => { setFilled([]); }, [unitKey, mode]);
+  const palette = Array.from(new Set(unit));
+  const complete = filled.length === hidden;
+  const correct = complete && filled.every((k, i) => k === full[givenCount + i]);
+  const add = (k: number) => { if (filled.length < hidden) setFilled((f) => [...f, k]); };
+
+  return (
+    <EngineCard hint={hintFor(resource)} onReset={() => setFilled([])}
+      settings={<>
+        <SettingRow label="Pattern unit">
+          <Segmented value={unitKey} onChange={setUnitKey} options={[
+            { label: "AB", value: "AB" }, { label: "ABC", value: "ABC" }, { label: "AAB", value: "AAB" }, { label: "ABB", value: "ABB" },
+          ]} />
+        </SettingRow>
+        <SettingRow label="Show with">
+          <Segmented value={mode} onChange={setMode} options={[{ label: "Colours", value: "colours" }, { label: "Shapes", value: "shapes" }, { label: "Sizes", value: "sizes" }]} />
+        </SettingRow>
+      </>}
+    >
+      <p className="mb-3 text-sm text-navy-600">What comes next? Tap the palette to continue the repeating pattern.</p>
+      <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-surface-soft p-4">
+        {full.map((k, i) => {
+          const given = i < givenCount;
+          const sIdx = i - givenCount;
+          const show = given || sIdx < filled.length;
+          const kind = given ? k : filled[sIdx];
+          return (
+            <div key={i} className={cn("flex h-11 w-11 items-center justify-center rounded-lg", given ? "" : "border-2 border-dashed border-navy-200 bg-white")}>
+              {show ? <PatternToken kind={kind} mode={mode} /> : <span className="text-lg font-bold text-navy-300">?</span>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex justify-center gap-3">
+        {palette.map((k) => (
+          <button key={k} onClick={() => add(k)} disabled={complete}
+            className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-navy-200 hover:border-teal-400 disabled:opacity-40" aria-label={`Add item ${k + 1}`}>
+            <PatternToken kind={k} mode={mode} />
+          </button>
+        ))}
+      </div>
+      {complete && (
+        <p className="mt-4 text-center text-sm font-semibold">
+          {correct ? <span className="text-emerald-600">✓ Pattern complete — well done!</span> : <span className="text-amber-600">Look at the repeating part again and try Reset.</span>}
         </p>
       )}
     </EngineCard>
