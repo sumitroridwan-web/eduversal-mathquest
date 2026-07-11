@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import type { Resource } from "@/types";
 import { craFor, type CRA } from "@/lib/cra";
 import { simPreset } from "@/config/simPresets";
+import { GameCover } from "./GameCover";
 
 // ==========================================================
 // ResourceCover — CRA-graded, per-topic scene illustrations.
@@ -314,6 +315,9 @@ export function ResourceCover({
   seed?: string;
 }) {
   void size; void cover; void type; void seed;
+  // Games get a mini-mockup of their real play screen so the thumbnail
+  // matches the page it opens.
+  if (resource?.type === "game") return <GameCover resource={resource} className={className} />;
   const theme = resource ? themeFor(resource) : "count";
   const cra: CRA = resource ? craFor(resource) : "pictorial";
   const s = resource ? seedNum(resource.id) : 0;
