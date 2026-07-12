@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Flame, Star, Trophy, Lock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/stores/auth";
@@ -17,6 +17,8 @@ export function ProgressOverview({ basePath = "/student" }: { basePath?: string 
   const uid = useAuth((s) => s.user?.id);
   const byUser = useProgress((s) => s.byUser);
   const activeDays = useProgress((s) => s.activeDays);
+  const hydrateServer = useProgress((s) => s.hydrateServer);
+  useEffect(() => { if (uid) void hydrateServer(uid); }, [uid, hydrateServer]);
 
   const { summary, strands, recommended } = useMemo(() => {
     const prog = (uid && byUser[uid]) || {};

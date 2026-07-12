@@ -1,0 +1,39 @@
+// MathQuest data model. SQLite for local/dev; swap the datasource
+// provider + url for Postgres in production without changing app code.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Progress {
+  id         String   @id @default(cuid())
+  userId     String
+  resourceId String
+  attempts   Int      @default(0)
+  bestScore  Int      @default(0)
+  stars      Int      @default(0)
+  completed  Boolean  @default(false)
+  lastPage   Int?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, resourceId])
+  @@index([userId])
+}
+
+model Assignment {
+  id           String   @id @default(cuid())
+  resourceId   String
+  classId      String
+  className    String
+  due          String?
+  instructions String?
+  assignedBy   String
+  createdAt    DateTime @default(now())
+
+  @@index([classId])
+}

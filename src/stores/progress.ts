@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { apiListProgress, apiSaveResult, apiSaveBookPage } from "@/lib/api";
 
 // ==========================================================
 // Learner progress — persisted per user so activity results and
@@ -42,6 +43,7 @@ interface ProgressState {
   record: (userId: string, resourceId: string, r: Omit<ResultInput, "at">) => void;
   setBookPage: (userId: string, resourceId: string, page: number) => void;
   ping: (userId: string) => void; // mark today active (for streaks)
+  hydrateServer: (userId: string) => Promise<void>; // pull DB → local cache
   clearUser: (userId: string) => void;
 }
 
@@ -59,15 +61,17 @@ export const useProgress = create<ProgressState>()(
     (set) => ({
       byUser: {},
       activeDays: {},
-      record: (userId, resourceId, r) =>
+      record: (userId, resourceId, r) => {
         set((s) => {
           const user = s.byUser[userId] ?? {};
           return {
             byUser: { ...s.byUser, [userId]: { ...user, [resourceId]: mergeResult(user[resourceId], { ...r, at: now() }) } },
             activeDays: { ...s.activeDays, [userId]: withToday(s.activeDays[userId]) },
           };
-        }),
-      setBookPage: (userId, resourceId, page) =>
+        });
+        apiSaveResult(userId, resourceId, r); // write-through to the server DB
+      },
+      setBookPage: (userId, resourceId, page) => {
         set((s) => {
           const user = s.byUser[userId] ?? {};
           const prev = user[resourceId];
@@ -78,8 +82,18 @@ export const useProgress = create<ProgressState>()(
             },
             activeDays: { ...s.activeDays, [userId]: withToday(s.activeDays[userId]) },
           };
-        }),
+        });
+        apiSaveBookPage(userId, resourceId, page);
+      },
       ping: (userId) => set((s) => ({ activeDays: { ...s.activeDays, [userId]: withToday(s.activeDays[userId]) } })),
+      hydrateServer: async (userId) => {
+        const rows = await apiListProgress(userId);
+        if (rows.length === 0) return;
+        const serverMap: ProgressByResource = {};
+        for (const r of rows) serverMap[r.resourceId] = { attempts: r.attempts, bestScore: r.bestScore, stars: r.stars, completed: r.completed, lastPage: r.lastPage ?? undefined, updatedAt: r.updatedAt };
+        // local (write-through, newest) wins; server fills gaps for new devices
+        set((s) => ({ byUser: { ...s.byUser, [userId]: { ...serverMap, ...(s.byUser[userId] ?? {}) } } }));
+      },
       clearUser: (userId) => set((s) => {
         const copy = { ...s.byUser }; delete copy[userId];
         const days = { ...s.activeDays }; delete days[userId];

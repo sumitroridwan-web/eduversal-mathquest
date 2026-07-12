@@ -1,14 +1,18 @@
 // ==========================================================
-// Data-access seam. Today this reads the static content catalogue
-// and the localStorage-backed progress store. To move to a real
-// backend, replace the bodies here (e.g. `fetch('/api/resources')`
-// or a Prisma/Supabase call) — the components calling these
-// functions do not change. Reads are async-shaped for that future.
+// Data-access seam. Content still comes from the static catalogue;
+// learner progress and assignments are now backed by a real server
+// database (Prisma/SQLite via /api/*), with the zustand stores as an
+// offline-first cache that writes through and hydrates from the DB.
+// To move content to the backend too, swap listResources/getResource
+// for a fetch — callers don't change.
 // ==========================================================
 
 import { resources } from "@/data/resources";
 import type { Resource } from "@/types";
 import { getResourceProgress, useProgress, type ResourceProgress, type ResultInput } from "@/stores/progress";
+
+// server sync layer (Prisma-backed API)
+export { apiListProgress, apiListAssignments } from "@/lib/api";
 
 // ---- content ----
 export async function listResources(): Promise<Resource[]> {

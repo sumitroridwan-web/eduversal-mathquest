@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Play, CheckCircle2, Clock, Trash2, Inbox } from "lucide-react";
 import { useAssignments } from "@/stores/assignments";
@@ -18,6 +19,8 @@ const byId = new Map(resources.map((r) => [r.id, r] as const));
 export function AssignmentInbox({ mode, basePath = "/student", className }: { mode: "student" | "teacher"; basePath?: string; className?: string }) {
   const list = useAssignments((s) => s.list);
   const remove = useAssignments((s) => s.remove);
+  const hydrateServer = useAssignments((s) => s.hydrateServer);
+  useEffect(() => { void hydrateServer(); }, [hydrateServer]);
   const uid = useAuth((s) => s.user?.id);
   const byUser = useProgress((s) => s.byUser);
   const prog = (uid && byUser[uid]) || {};
