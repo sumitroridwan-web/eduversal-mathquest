@@ -6,11 +6,15 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ContentLibrary } from "@/components/content/ContentLibrary";
+import { MULTIPLAYER_IDS } from "@/components/content/multiplayerEngines";
 import { resources, games, simulations, books } from "@/data/resources";
+
+const mpGames = games.filter((r) => MULTIPLAYER_IDS.includes(r.id));
 
 const tabs = [
   { id: "all", label: "All", count: resources.length },
   { id: "game", label: "Games", count: games.length },
+  { id: "multiplayer", label: "👥 Multiplayer", count: mpGames.length },
   { id: "simulation", label: "Simulations", count: simulations.length },
   { id: "book", label: "Books", count: books.length },
 ];
@@ -18,7 +22,9 @@ const tabs = [
 export default function ExplorePage() {
   const [tab, setTab] = useState("all");
   const list =
-    tab === "all" ? resources : resources.filter((r) => r.type === tab);
+    tab === "all" ? resources
+      : tab === "multiplayer" ? mpGames
+      : resources.filter((r) => r.type === tab);
 
   return (
     <div className="container-page py-12">
