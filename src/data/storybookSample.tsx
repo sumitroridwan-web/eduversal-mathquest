@@ -34,51 +34,51 @@ export const sampleBook: StoryBook = {
   level: "G1", audio: true, readerStyle: "clean",
   accent: "#e07aa0", coverFrom: "#ffe6d8", coverTo: "#ffd0c6", titleColor: "#a11a52",
   characters: [{ name: "Mia", role: "who has just moved in" }, { name: "Tomo & Tara", role: "the kind neighbours" }],
-  cover: <g>
+  cover: <R.Painterly seed={1}>
     <R.Room from="#fff1e6" to="#ffd7cc" floor="#e8b98a" k="cov" /><R.Confetti seed={2} />
     <R.Cake cx={160} cy={116} r={42} candles={3} k="covc" />
     <R.RichKid x={90} y={170} s={1.15} k="covm" {...MIA} expr="excited" arm="up" />
     <R.RichKid x={232} y={170} s={1.15} k="covt" {...TARA} expr="happy" arm="up" flip />
-  </g>,
+  </R.Painterly>,
   pages: [
     {
       text: "Mia moves into a new home. Knock, knock! Who is at the door?",
       narration: "Mia moves into a new home. Knock, knock! Who is at the door?",
-      scene: <g><R.Room from="#fdeede" to="#f7d6c2" floor="#e0ac7a" k="p1" /><R.Window x={258} y={40} /><R.Plant x={44} y={162} /><R.Door x={116} />
-        <R.RichKid x={200} y={168} s={1.3} k="p1m" {...MIA} expr="surprised" look={-0.6} /></g>,
+      scene: <R.Painterly seed={2}><R.Room from="#fdeede" to="#f7d6c2" floor="#e0ac7a" k="p1" /><R.Window x={258} y={40} /><R.Plant x={44} y={162} /><R.Door x={116} />
+        <R.RichKid x={200} y={168} s={1.3} k="p1m" {...MIA} expr="surprised" look={-0.6} /></R.Painterly>,
     },
     {
       text: "It is Tomo and Tara! \"Welcome!\" they cheer, holding out a big round cake.",
       narration: "It is Tomo and Tara! Welcome, they cheer, holding out a big round cake.",
-      scene: <g><R.Room from="#fff0e0" to="#ffd7cc" floor="#e8b98a" k="p2" /><R.Confetti seed={5} /><R.Balloon x={40} y={54} fill="#ff6b9d" k="p2a" /><R.Balloon x={288} y={62} fill="#4fc3f7" k="p2b" />
+      scene: <R.Painterly seed={3}><R.Room from="#fff0e0" to="#ffd7cc" floor="#e8b98a" k="p2" /><R.Confetti seed={5} /><R.Balloon x={40} y={54} fill="#ff6b9d" k="p2a" /><R.Balloon x={288} y={62} fill="#4fc3f7" k="p2b" />
         <R.RichKid x={92} y={172} s={1.2} k="p2t" {...TOMO} expr="excited" arm="up" />
         <R.Cake cx={160} cy={104} r={30} candles={2} k="p2c" />
-        <R.RichKid x={228} y={172} s={1.2} k="p2r" {...TARA} expr="excited" arm="up" flip /></g>,
+        <R.RichKid x={228} y={172} s={1.2} k="p2r" {...TARA} expr="excited" arm="up" flip /></R.Painterly>,
     },
     {
       text: "Two friends want to share. Mia cuts the cake into 2 equal parts. Each half is exactly the same size.",
-      scene: <g><R.Room from="#fdeede" to="#f7d9c8" floor="#e0ac7a" k="p3" /><R.Rug />
+      scene: <g><R.Painterly seed={4}><R.Room from="#fdeede" to="#f7d9c8" floor="#e0ac7a" k="p3" /><R.Rug />
         <R.Cake cx={132} cy={112} r={46} parts={2} k="p3c" />
-        {T(244, 96, "2 halves", 22, "#a11a52")}{T(244, 124, "equal parts", 13, "#199473")}
-        <R.RichKid x={288} y={186} s={0.95} k="p3m" {...MIA} expr="happy" /></g>,
+        <R.RichKid x={288} y={186} s={0.95} k="p3m" {...MIA} expr="happy" /></R.Painterly>
+        {T(244, 96, "2 halves", 22, "#a11a52")}{T(244, 124, "equal parts", 13, "#199473")}</g>,
     },
     {
       text: "Then one more friend arrives! Now they cut the cake into 4 equal parts — four fair quarters.",
-      scene: <g><R.Room from="#fff0e0" to="#ffd7cc" floor="#e8b98a" k="p4" /><R.Rug fill="#c7e59a" />
+      scene: <g><R.Painterly seed={5}><R.Room from="#fff0e0" to="#ffd7cc" floor="#e8b98a" k="p4" /><R.Rug fill="#c7e59a" />
         <R.Cake cx={132} cy={112} r={46} parts={4} k="p4c" />
-        {T(244, 96, "4 quarters", 22, "#a11a52")}{T(244, 124, "all the same", 13, "#199473")}
-        <R.RichKid x={288} y={186} s={0.95} k="p4t" {...TOMO} expr="excited" /></g>,
+        <R.RichKid x={288} y={186} s={0.95} k="p4t" {...TOMO} expr="excited" /></R.Painterly>
+        {T(244, 96, "4 quarters", 22, "#a11a52")}{T(244, 124, "all the same", 13, "#199473")}</g>,
     },
     {
       text: "Everyone gets a fair, equal slice. \"Sharing is sweet!\" they all laugh together.",
       narration: "Everyone gets a fair, equal slice. Sharing is sweet, they all laugh together.",
-      scene: <g><R.Room from="#fff4e0" to="#ffe0c8" floor="#e8b98a" k="p5" /><R.Confetti seed={9} />
+      scene: <R.Painterly seed={6}><R.Room from="#fff4e0" to="#ffe0c8" floor="#e8b98a" k="p5" /><R.Confetti seed={9} />
         {[[70, MIA, false], [160, TOMO, false], [250, TARA, true]].map(([cx, c, fl], i) => <g key={i}>
           <path d={`M${Number(cx)} 96 l16 -24 l16 24 Z`} fill="#ffdca8" stroke="#f6a5c0" strokeWidth={2} />
           <circle cx={Number(cx) + 16} cy={84} r={3} fill="#e0466f" />
           <R.RichKid x={Number(cx) + 16} y={178} s={1} k={`p5${i}`} {...(c as typeof MIA)} expr="excited" flip={fl as boolean} />
         </g>)}
-        <Star x={38} y={52} s={2.4} fill="#ffd84d" /><Star x={286} y={56} s={2.4} fill="#ffd84d" /></g>,
+        <Star x={38} y={52} s={2.4} fill="#ffd84d" /><Star x={286} y={56} s={2.4} fill="#ffd84d" /></R.Painterly>,
     },
   ],
   check: [

@@ -100,15 +100,38 @@ export function RichKid({ x = 0, y = 0, s = 1, k = "0", skin = "#c68642", hair =
   );
 }
 
+// Painterly wrapper: gentle edge displacement (hand-drawn wobble) on the
+// illustration, plus a warm paper-grain texture and a soft vignette on top.
+// Keep text labels OUTSIDE this so they stay crisp.
+export function Painterly({ children, seed = 1 }: { children: React.ReactNode; seed?: number }) {
+  const p = `pt${seed}`, g = `gr${seed}`, v = `vg${seed}`;
+  return <g>
+    <defs>
+      <filter id={p} x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="turbulence" baseFrequency="0.011" numOctaves={2} seed={seed} result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale={3} xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+      <filter id={g} x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves={2} seed={seed + 7} result="nn" />
+        <feColorMatrix in="nn" type="matrix" values="0 0 0 0 0.28  0 0 0 0 0.18  0 0 0 0 0.13  0 0 0 0.4 0" />
+      </filter>
+      <radialGradient id={v} cx="50%" cy="40%" r="78%"><stop offset="52%" stopColor="#5a3a2a" stopOpacity="0" /><stop offset="100%" stopColor="#5a3a2a" stopOpacity="0.17" /></radialGradient>
+    </defs>
+    <g filter={`url(#${p})`}>{children}</g>
+    <rect x={0} y={0} width={320} height={220} filter={`url(#${g})`} style={{ mixBlendMode: "multiply" }} opacity={0.5} />
+    <rect x={0} y={0} width={320} height={220} fill={`url(#${v})`} />
+  </g>;
+}
+
 // ---- warm scene props ----
 export function Room({ from = "#ffe9df", to = "#ffd7cf", floor = "#e8b98a", k = "r" }: { from?: string; to?: string; floor?: string; k?: string }) {
   return <g>
     <defs><linearGradient id={`wall${k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={from} /><stop offset="1" stopColor={to} /></linearGradient>
       <linearGradient id={`fl${k}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={lighten(floor, 0.12)} /><stop offset="1" stopColor={darken(floor, 0.14)} /></linearGradient></defs>
-    <rect x={0} y={0} width={320} height={220} fill={`url(#wall${k})`} />
-    <rect x={0} y={162} width={320} height={58} fill={`url(#fl${k})`} />
+    <rect x={-10} y={-10} width={340} height={240} fill={`url(#wall${k})`} />
+    <rect x={-10} y={162} width={340} height={68} fill={`url(#fl${k})`} />
     {[40, 120, 200, 280].map((x) => <line key={x} x1={x} y1={162} x2={x + 20} y2={220} stroke={darken(floor, 0.18)} strokeWidth={1.5} opacity={0.4} />)}
-    <line x1={0} y1={162} x2={320} y2={162} stroke={darken(floor, 0.2)} strokeWidth={2} opacity={0.4} />
+    <line x1={-10} y1={162} x2={330} y2={162} stroke={darken(floor, 0.2)} strokeWidth={2} opacity={0.4} />
   </g>;
 }
 export const Window = ({ x = 250, y = 40 }: { x?: number; y?: number }) => <g>
