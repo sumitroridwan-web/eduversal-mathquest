@@ -1421,6 +1421,18 @@ export const resources: Resource[] = [
     rating: 4.8, plays: 860, relatedIds: ["res-sim-s4-coordinates-q1", "res-problem-solving-mission"],
   },
 
+  // ---------------- STORYBOOK — clean-style sample (Let's-Read look) ----------------
+  {
+    id: "res-book-cake-to-share", title: "A Cake to Share", type: "book", status: "published", cover: "book-cakeshare",
+    programme: "primary", stage: "Stage 1", gradeLevel: "Grade 1", strand: "Number", subStrand: "Fractions",
+    topic: "Sharing into equal parts", curriculumRef: "EDV-P1-N.14", difficulty: "Foundation", durationMins: 8, learningPurpose: "Introduction",
+    objective: { teacher: "Share a whole into equal parts (halves and quarters) in a real sharing context.", student: "I can share a cake into equal parts.", parent: "Cut fruit or toast into equal halves and quarters together." },
+    vocabulary: ["share", "equal", "half", "halves", "quarter", "fair", "whole"],
+    thinkPrompt: "How do you know each slice is fair?",
+    chapters: [{ title: "Fair Shares", body: "Two friends share a cake into 2 equal halves; four friends need 4 quarters.", checkpoint: { question: "Two equal parts are called…", answer: "halves" } }],
+    rating: 4.9, plays: 120, relatedIds: ["res-fraction-pizza", "res-book-fraction-feast"],
+  },
+
   // ---------------- STORYBOOKS — expansion batch 2 (gap topics) ----------------
   {
     id: "res-book-where-momo", title: "Where Is Momo?", type: "book", status: "published", cover: "book-momo",

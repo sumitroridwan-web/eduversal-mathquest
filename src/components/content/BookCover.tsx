@@ -25,7 +25,27 @@ function wrap(title: string, max: number): string[] {
   return lines.slice(0, 3);
 }
 
+// A clean, portrait "real book" cover: full-bleed illustration with the
+// title on a footer band — like a picture book on a shelf (Let's-Read style).
+export function CleanCover({ book, className }: { book: StoryBook; className?: string }) {
+  const ink = book.titleColor ?? "#1b2540";
+  return (
+    <div className={cn("relative flex flex-col overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-black/5", className)}>
+      <div className="relative flex-1" style={{ backgroundImage: `linear-gradient(160deg, ${book.coverFrom}, ${book.coverTo})` }}>
+        <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>{book.cover}</svg>
+        {book.audio && <div className="absolute right-2 top-2 rounded-full bg-white/90 px-1.5 py-0.5 text-xs shadow">🔊</div>}
+      </div>
+      <div className="shrink-0 px-3 py-3 text-center" style={{ borderTop: `3px solid ${book.accent}` }}>
+        <h3 className="font-display text-base font-extrabold leading-tight sm:text-lg" style={{ color: ink }}>{book.title}</h3>
+        {book.author && <p className="mt-0.5 text-[11px] font-semibold text-navy-400">{book.author}</p>}
+        <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: book.accent }}>{LEVEL_TAG[book.level]}</span>
+      </div>
+    </div>
+  );
+}
+
 export function StoryCover({ book, mode = "thumb", className }: { book: StoryBook; mode?: "thumb" | "full"; className?: string }) {
+  if (book.readerStyle === "clean") return <CleanCover book={book} className={className} />;
   const lines = wrap(book.title, 17);
   const plateH = 22 + lines.length * 20 + 14;
   const ink = book.titleColor ?? "#1b2540";

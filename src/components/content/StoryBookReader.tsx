@@ -118,24 +118,33 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
   }, [go]);
 
   const tappable = leaf !== CHECK; // don't hijack taps on the interactive check
+  const clean = book.readerStyle === "clean";
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className={cn("mx-auto", clean ? "max-w-2xl" : "max-w-3xl")}>
       {/* book stage */}
       <div className="relative select-none" style={{ perspective: 1800 }}>
         <div
-          className="relative w-full origin-left overflow-hidden rounded-2xl shadow-2xl"
+          className={cn("relative w-full origin-left overflow-hidden rounded-2xl", clean ? "border border-navy-100 bg-white shadow-sm" : "shadow-2xl")}
           style={{ transform: `rotateY(${rot}deg)`, transformStyle: "preserve-3d", transition: snap ? "none" : "transform .25s ease-in", transformOrigin: "left center" }}
         >
-          <Leaf book={book} leaf={leaf} idx={{ COVER, TITLE, FIRST, LAST_PAGE, CHECK, BACK }} storyIndex={storyIndex} word={reading ? word : -1} onFinish={() => go(1)} onRestart={goHome} onComplete={onComplete} savedProgress={Boolean(uid)} />
+          <Leaf book={book} leaf={leaf} idx={{ COVER, TITLE, FIRST, LAST_PAGE, CHECK, BACK }} storyIndex={storyIndex} word={reading ? word : -1} clean={clean} onFinish={() => go(1)} onRestart={goHome} onComplete={onComplete} savedProgress={Boolean(uid)} />
           {/* page-curl shading while flipping */}
-          {anim && <div className="pointer-events-none absolute inset-0 rounded-2xl" style={{ background: rot < 0 ? "linear-gradient(90deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.18))" : "linear-gradient(270deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.18))" }} />}
+          {anim && !clean && <div className="pointer-events-none absolute inset-0 rounded-2xl" style={{ background: rot < 0 ? "linear-gradient(90deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.18))" : "linear-gradient(270deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.18))" }} />}
         </div>
 
         {/* tap zones */}
         {tappable && <>
           <button aria-label="Previous page" onClick={() => go(-1)} disabled={leaf === 0} className="absolute inset-y-0 left-0 w-1/4 cursor-w-resize disabled:cursor-default" />
           <button aria-label="Next page" onClick={() => go(1)} disabled={leaf === BACK} className="absolute inset-y-0 right-0 w-1/4 cursor-e-resize disabled:cursor-default" />
+        </>}
+
+        {/* clean-style circular side arrows (Let's-Read look) */}
+        {clean && tappable && <>
+          <button aria-label="Previous page" onClick={() => go(-1)} disabled={leaf === 0}
+            className="absolute -left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-700 shadow-md transition-colors hover:bg-navy-50 disabled:opacity-30 sm:-left-5"><ChevronLeft className="h-5 w-5" /></button>
+          <button aria-label="Next page" onClick={() => go(1)} disabled={leaf === BACK}
+            className="absolute -right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-700 shadow-md transition-colors hover:bg-navy-50 disabled:opacity-30 sm:-right-5"><ChevronRight className="h-5 w-5" /></button>
         </>}
       </div>
 
@@ -161,25 +170,76 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
           </div>
         )}
 
-        {/* progress dots for story pages */}
-        <div className="flex items-center gap-1.5">
-          {book.pages.map((_, i) => (
-            <button key={i} onClick={() => { stop(); setLeaf(FIRST + i); }} aria-label={`Page ${i + 1}`}
-              className={cn("h-2.5 rounded-full transition-all", isStory && storyIndex === i ? "w-5 bg-teal-500" : "w-2.5 bg-navy-200 hover:bg-navy-300")} />
-          ))}
-        </div>
+        {/* progress: a slider + counter (clean) or dots (classic) */}
+        {clean ? (
+          <div className="flex min-w-[180px] flex-1 items-center gap-3">
+            <input type="range" min={0} max={LEAVES - 1} value={leaf} onChange={(e) => { stop(); setLeaf(Number(e.target.value)); leafRef.current = Number(e.target.value); }}
+              aria-label="Go to page" className="flex-1 accent-teal-600" />
+            <span className="w-12 text-right text-xs font-bold tabular-nums text-navy-400">{leaf + 1} / {LEAVES}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            {book.pages.map((_, i) => (
+              <button key={i} onClick={() => { stop(); setLeaf(FIRST + i); }} aria-label={`Page ${i + 1}`}
+                className={cn("h-2.5 rounded-full transition-all", isStory && storyIndex === i ? "w-5 bg-teal-500" : "w-2.5 bg-navy-200 hover:bg-navy-300")} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ---------------- one book leaf ----------------
-function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart, onComplete, savedProgress }: {
-  book: StoryBook; leaf: number; idx: { COVER: number; TITLE: number; FIRST: number; LAST_PAGE: number; CHECK: number; BACK: number }; storyIndex: number; word: number; onFinish: () => void; onRestart: () => void; onComplete: (r: { stars: number; score: number }) => void; savedProgress: boolean;
+function Leaf({ book, leaf, idx, storyIndex, word, clean, onFinish, onRestart, onComplete, savedProgress }: {
+  book: StoryBook; leaf: number; idx: { COVER: number; TITLE: number; FIRST: number; LAST_PAGE: number; CHECK: number; BACK: number }; storyIndex: number; word: number; clean: boolean; onFinish: () => void; onRestart: () => void; onComplete: (r: { stars: number; score: number }) => void; savedProgress: boolean;
 }) {
   // Each leaf sizes to its own content so text is NEVER clipped — the page
   // grows taller for longer text (higher grades) instead of cutting it off.
   const face = "relative w-full overflow-hidden rounded-2xl";
+  const total = book.pages.length;
+
+  // ---- clean (Let's-Read style) leaves ----
+  if (clean) {
+    if (leaf === idx.COVER) {
+      return <div className={cn(face, "bg-white")}><StoryCover book={book} mode="full" className="mx-auto aspect-[3/4] max-w-xs" />
+        <p className="pb-5 text-center text-xs font-semibold text-navy-400">Tap the arrow to start reading →</p></div>;
+    }
+    if (leaf === idx.TITLE) {
+      return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center gap-3 bg-white px-6 py-8 text-center")}>
+        <StoryCover book={book} className="aspect-[3/4] w-36" />
+        <h2 className="mt-2 font-display text-2xl font-extrabold text-navy-900">{book.title}</h2>
+        {book.author && <p className="text-sm font-semibold text-navy-500">{book.author}</p>}
+        <p className="max-w-sm text-sm text-navy-500">{book.subtitle}</p>
+        <p className="mt-2 text-xs font-semibold text-navy-400">{book.pages.length} pages · {book.characters.map((c) => c.name).join(", ")}</p>
+      </div>;
+    }
+    if (leaf >= idx.FIRST && leaf <= idx.LAST_PAGE) {
+      const page = book.pages[storyIndex];
+      const sentences = page.text.split(/(?<=[.!?])\s+/);
+      return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center bg-white px-8 py-8 sm:px-14")}>
+        <div className="w-full max-w-md overflow-hidden rounded-2xl" style={{ backgroundImage: `linear-gradient(to bottom, ${book.coverFrom}, #ffffff)` }}>
+          <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" className="h-full w-full">{page.scene}</svg>
+        </div>
+        <div className="mt-7 max-w-lg text-center" role="group" aria-roledescription="story page" aria-live="polite">
+          {sentences.map((s, i) => (
+            <p key={i} className={cn("font-display text-xl leading-relaxed text-navy-800 sm:text-2xl", i > 0 && "mt-1")}>{s}</p>
+          ))}
+        </div>
+      </div>;
+    }
+    if (leaf === idx.BACK) {
+      return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center gap-3 bg-white text-center")}>
+        <div className="text-5xl">🌟</div>
+        <h2 className="font-display text-3xl font-extrabold text-navy-900">The End</h2>
+        <p className="max-w-xs text-sm font-semibold text-navy-600">You read <span style={{ color: book.accent }}>{book.title}</span> — lovely reading!</p>
+        {savedProgress && <p className="text-xs font-semibold text-emerald-600">✓ Saved to your progress</p>}
+        <Button variant="primary" onClick={onRestart} className="mt-2"><RotateCcw className="h-4 w-4" /> Read again</Button>
+      </div>;
+    }
+    // check leaf falls through to the shared QuickCheck below
+  }
+
   if (leaf === idx.COVER) {
     return <div className={cn(face, "bg-white")}><StoryCover book={book} mode="full" className="aspect-[4/3] w-full" />
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 animate-pulse rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-navy-700 shadow">Tap the page to open →</div></div>;
@@ -212,7 +272,7 @@ function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart, onComple
             return <span key={i} className={cn("rounded transition-colors", word === wc && "bg-accent-200 px-0.5")}>{w}</span>;
           })}
         </p>
-        <span className="mt-2 block text-right text-xs font-bold text-navy-300">{storyIndex + 1} / {book.pages.length}</span>
+        <span className="mt-2 block text-right text-xs font-bold text-navy-300">{storyIndex + 1} / {total}</span>
       </div>
     </div>;
   }

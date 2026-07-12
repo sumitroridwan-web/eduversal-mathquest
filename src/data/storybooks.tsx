@@ -25,6 +25,9 @@ export interface StoryBook {
   cover: React.ReactNode; // illustration only; BookCover overlays the title
   pages: StoryPage[];
   check: CheckItem[];
+  /** "clean" = Let's-Read-style minimal reader (centred image + text, slider). */
+  readerStyle?: "classic" | "clean";
+  author?: string;
 }
 
 const num = (n: number): CheckOption => ({ num: String(n) });
@@ -385,9 +388,10 @@ const smoothie: StoryBook = {
 import { extraBooks } from "./storybooksExtra";
 import { extraBooks2 } from "./storybooksExtra2";
 import { extraBooks3 } from "./storybooksExtra3";
+import { sampleBook } from "./storybookSample";
 
 const baseBooks: StoryBook[] = [nurseryDucks, countingGarden, patternParade, shapeCity, marketDay, clockTower, roboBakery, fractionFeast, dataDetectives, smoothie];
-export const storybooks: StoryBook[] = [...baseBooks, ...extraBooks, ...extraBooks2, ...extraBooks3];
+export const storybooks: StoryBook[] = [sampleBook, ...baseBooks, ...extraBooks, ...extraBooks2, ...extraBooks3];
 
 export function getStorybook(id: string): StoryBook | undefined {
   return storybooks.find((b) => b.id === id);
