@@ -1398,7 +1398,7 @@ export const resources: Resource[] = [
     vocabulary: ["decimal", "point", "tenths", "pound", "pence", "change"],
     twm: "Convincing", thinkPrompt: "Why must you line up the decimal points when adding money?",
     chapters: [{ title: "Adding Prices", body: "£1.50 + £0.70 = £2.20.", checkpoint: { question: "£1.50 + £0.70 = ?", answer: "£2.20" } }],
-    rating: 4.7, plays: 1120, relatedIds: ["res-money-shop", "res-fraction-feast"],
+    rating: 4.7, plays: 1120, relatedIds: ["res-money-shop", "res-book-fraction-feast"],
   },
   {
     id: "res-book-percent-party", title: "The Percent Party", type: "book", status: "published", cover: "book-percent",
