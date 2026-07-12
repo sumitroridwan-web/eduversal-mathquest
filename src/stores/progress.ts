@@ -38,21 +38,34 @@ export function mergeResult(prev: ResourceProgress | undefined, r: ResultInput):
 
 interface ProgressState {
   byUser: ProgressMap;
+  activeDays: Record<string, string[]>; // userId → sorted unique YYYY-MM-DD
   record: (userId: string, resourceId: string, r: Omit<ResultInput, "at">) => void;
   setBookPage: (userId: string, resourceId: string, page: number) => void;
+  ping: (userId: string) => void; // mark today active (for streaks)
   clearUser: (userId: string) => void;
 }
 
 const now = () => new Date().toISOString();
+const today = () => new Date().toISOString().slice(0, 10);
+
+function withToday(days: string[] | undefined): string[] {
+  const d = today();
+  if (days?.includes(d)) return days;
+  return [...(days ?? []), d];
+}
 
 export const useProgress = create<ProgressState>()(
   persist(
     (set) => ({
       byUser: {},
+      activeDays: {},
       record: (userId, resourceId, r) =>
         set((s) => {
           const user = s.byUser[userId] ?? {};
-          return { byUser: { ...s.byUser, [userId]: { ...user, [resourceId]: mergeResult(user[resourceId], { ...r, at: now() }) } } };
+          return {
+            byUser: { ...s.byUser, [userId]: { ...user, [resourceId]: mergeResult(user[resourceId], { ...r, at: now() }) } },
+            activeDays: { ...s.activeDays, [userId]: withToday(s.activeDays[userId]) },
+          };
         }),
       setBookPage: (userId, resourceId, page) =>
         set((s) => {
@@ -63,9 +76,15 @@ export const useProgress = create<ProgressState>()(
               ...s.byUser,
               [userId]: { ...user, [resourceId]: { attempts: prev?.attempts ?? 0, bestScore: prev?.bestScore ?? 0, stars: prev?.stars ?? 0, completed: prev?.completed ?? false, lastPage: page, updatedAt: now() } },
             },
+            activeDays: { ...s.activeDays, [userId]: withToday(s.activeDays[userId]) },
           };
         }),
-      clearUser: (userId) => set((s) => { const copy = { ...s.byUser }; delete copy[userId]; return { byUser: copy }; }),
+      ping: (userId) => set((s) => ({ activeDays: { ...s.activeDays, [userId]: withToday(s.activeDays[userId]) } })),
+      clearUser: (userId) => set((s) => {
+        const copy = { ...s.byUser }; delete copy[userId];
+        const days = { ...s.activeDays }; delete days[userId];
+        return { byUser: copy, activeDays: days };
+      }),
     }),
     { name: "mathquest-progress" },
   ),

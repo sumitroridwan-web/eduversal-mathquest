@@ -16,6 +16,8 @@ import { ActivityErrorBoundary } from "./ActivityErrorBoundary";
 import { useEffect } from "react";
 import { track } from "@/lib/analytics";
 import { answersMatch } from "@/lib/answers";
+import { useAuth } from "@/stores/auth";
+import { useProgress } from "@/stores/progress";
 
 /**
  * The activity player adapts to the resource type: bespoke interactive
@@ -24,7 +26,12 @@ import { answersMatch } from "@/lib/answers";
  * Each activity is wrapped in an error boundary so one crash can't blank the page.
  */
 export function ActivityPlayer({ resource }: { resource: Resource }) {
-  useEffect(() => { track("activity_open", { resourceId: resource.id, type: resource.type }); }, [resource.id, resource.type]);
+  const uid = useAuth((s) => s.user?.id);
+  const ping = useProgress((s) => s.ping);
+  useEffect(() => {
+    track("activity_open", { resourceId: resource.id, type: resource.type });
+    if (uid) ping(uid);
+  }, [resource.id, resource.type, uid, ping]);
   return (
     <ActivityErrorBoundary resourceId={resource.id} title={resource.title}>
       <ActivityBody resource={resource} />

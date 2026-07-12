@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeading } from "@/components/ui/PageHeading";
+import { ProgressOverview } from "@/components/dashboards/ProgressOverview";
 import { ChartCard } from "@/components/dashboards/ChartCard";
 import { BarSeries, MasteryRadar, AreaTrend } from "@/components/charts/Charts";
 import { ProgressBar } from "@/components/ui/Progress";
@@ -20,6 +21,8 @@ export default function StudentProgress() {
   return (
     <div className="space-y-6">
       <PageHeading title="My progress" description="See how much you've grown as a mathematician!" />
+
+      <ProgressOverview />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <ChartCard title="My growth" description="Overall mastery over time" className="lg:col-span-2">
