@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { Resource } from "@/types";
+import { FONT, CoverText, coverStar } from "./coverKit";
 
 // ==========================================================
 // GameCover — the library thumbnail for a game mirrors its real
@@ -11,10 +12,9 @@ import type { Resource } from "@/types";
 const NAVY = "#1b2540", SKY0 = "#e8f3ff", SKY1 = "#ffffff";
 const TEAL = "#14b8a6", ORANGE = "#f59e0b", ACC = "#ffb420", ACC2 = "#ffdd8a";
 const INDIGO = "#6366f1", ROSE = "#f43f5e", GRN = "#22c55e", RED = "#ef4444", W = "#ffffff", LINE = "#cbd5e1", CARD = "#dbe4f0";
-const FONT = "var(--font-display), Poppins, system-ui, sans-serif";
-
+// thin wrapper keeping GameCover's defaults (white text, size 13)
 function T({ x, y, t, s = 13, fill = W, w = 800, anchor = "middle" as const }: { x: number; y: number; t: string; s?: number; fill?: string; w?: number; anchor?: "start" | "middle" | "end" }) {
-  return <text x={x} y={y} fontSize={s} fontWeight={w} fill={fill} textAnchor={anchor} dominantBaseline="central" fontFamily={FONT}>{t}</text>;
+  return <CoverText x={x} y={y} t={t} s={s} fill={fill} w={w} anchor={anchor} />;
 }
 function Frac({ x, y, n, d, s = 15, fill = W }: { x: number; y: number; n: string | number; d: string | number; s?: number; fill?: string }) {
   const w = Math.max(String(n).length, String(d).length) * s * 0.42 + 3;
@@ -24,7 +24,7 @@ function Frac({ x, y, n, d, s = 15, fill = W }: { x: number; y: number; n: strin
     <T x={x} y={y + s * 0.52} t={String(d)} s={s} fill={fill} />
   </g>;
 }
-const star = (x: number, y: number, s: number, fill: string) => <path transform={`translate(${x} ${y}) scale(${s / 9})`} d="M0 -9 L2.6 -2.8 L9 -2.8 L3.9 1.1 L5.6 7.3 L0 3.6 L-5.6 7.3 L-3.9 1.1 L-9 -2.8 L-2.6 -2.8 Z" fill={fill} />;
+const star = coverStar;
 const heart = (x: number, y: number, s: number, fill: string) => <path transform={`translate(${x} ${y}) scale(${s / 14})`} d="M0 3 C -2 -3 -9 -1 -9 4 C -9 9 -2 12 0 14 C 2 12 9 9 9 4 C 9 -1 2 -3 0 3 Z" fill={fill} />;
 
 // navy HUD strip that every game engine shows across the top

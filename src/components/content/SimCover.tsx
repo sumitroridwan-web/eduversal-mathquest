@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { Resource } from "@/types";
 import { themeFor } from "./ResourceCover";
+import { CoverText } from "./coverKit";
 
 // ==========================================================
 // SimCover — the library thumbnail for a simulation mirrors its
@@ -13,10 +14,10 @@ import { themeFor } from "./ResourceCover";
 
 const TEAL = "#27ab83", TEALD = "#199473", TEALL = "#8eedc7", ACC = "#f59e0b", ACC2 = "#ffb420", PURPLE = "#7c3aed", NAVY = "#1b2540";
 const SOFT = "#f6f8fb", LINE = "#e2e8f0", CARD = "#dbe4f0", INK = "#31415f", W = "#ffffff";
-const FONT = "var(--font-display), Poppins, system-ui, sans-serif";
 
+// thin wrapper keeping SimCover's defaults (navy text, size 12)
 function T({ x, y, t, s = 12, fill = NAVY, w = 800, anchor = "middle" as const }: { x: number; y: number; t: string; s?: number; fill?: string; w?: number; anchor?: "start" | "middle" | "end" }) {
-  return <text x={x} y={y} fontSize={s} fontWeight={w} fill={fill} textAnchor={anchor} dominantBaseline="central" fontFamily={FONT}>{t}</text>;
+  return <CoverText x={x} y={y} t={t} s={s} fill={fill} w={w} anchor={anchor} />;
 }
 function Frac({ x, y, n, d, s = 16, fill = NAVY }: { x: number; y: number; n: string | number; d: string | number; s?: number; fill?: string }) {
   const w = Math.max(String(n).length, String(d).length) * s * 0.42 + 4;
