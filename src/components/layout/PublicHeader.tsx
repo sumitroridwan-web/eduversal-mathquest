@@ -7,18 +7,22 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/useT";
+import { LocaleSwitch } from "@/components/i18n/LocaleSwitch";
+import type { MessageKey } from "@/i18n/dictionaries";
 
-const links = [
-  { label: "Home", href: "/" },
-  { label: "Explore", href: "/explore" },
-  { label: "About", href: "/about" },
-  { label: "Features", href: "/features" },
-  { label: "For Schools", href: "/for-schools" },
+const links: { key: MessageKey; href: string }[] = [
+  { key: "nav.home", href: "/" },
+  { key: "nav.explore", href: "/explore" },
+  { key: "nav.about", href: "/about" },
+  { key: "nav.features", href: "/features" },
+  { key: "nav.forSchools", href: "/for-schools" },
 ];
 
 export function PublicHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <header className="sticky top-0 z-40 border-b border-navy-100 bg-white/85 backdrop-blur-md">
@@ -36,16 +40,17 @@ export function PublicHeader() {
                   : "text-navy-600 hover:bg-navy-50 hover:text-navy-900",
               )}
             >
-              {l.label}
+              {t(l.key)}
             </Link>
           ))}
         </nav>
         <div className="hidden items-center gap-2 md:flex">
+          <LocaleSwitch />
           <Button variant="ghost" size="sm" asChildHref="/login">
-            Login
+            {t("auth.login")}
           </Button>
           <Button variant="primary" size="sm" asChildHref="/sign-up">
-            Sign Up
+            {t("auth.signUp")}
           </Button>
         </div>
         <button
@@ -67,15 +72,16 @@ export function PublicHeader() {
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy-700 hover:bg-navy-50"
               >
-                {l.label}
+                {t(l.key)}
               </Link>
             ))}
+            <div className="mt-2 px-1"><LocaleSwitch /></div>
             <div className="mt-2 flex gap-2 px-1">
               <Button variant="outline" size="sm" asChildHref="/login" className="flex-1">
-                Login
+                {t("auth.login")}
               </Button>
               <Button variant="primary" size="sm" asChildHref="/sign-up" className="flex-1">
-                Sign Up
+                {t("auth.signUp")}
               </Button>
             </div>
           </nav>
