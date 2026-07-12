@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
 import type { StoryBook, CheckItem, CheckOption } from "@/data/storybooks";
 import { StoryCover } from "./BookCover";
+import { useAuth } from "@/stores/auth";
+import { progressFor, saveBookPage, recordResult } from "@/lib/repository";
 
 // ==========================================================
 // StoryBookReader — a polished interactive e-book: page-flip,
@@ -27,6 +29,17 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
 
   const isStory = leaf >= FIRST && leaf <= LAST_PAGE;
   const storyIndex = leaf - FIRST;
+
+  // ---- persistence: resume where the reader left off, save progress ----
+  const uid = useAuth((s) => s.user?.id);
+  useEffect(() => {
+    if (initialLeaf !== 0 || !uid) return;
+    const saved = progressFor(uid, book.id)?.lastPage;
+    if (saved != null && saved >= FIRST && saved <= LAST_PAGE) { setLeaf(saved); leafRef.current = saved; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { if (uid && leaf >= FIRST && leaf <= LAST_PAGE) saveBookPage(uid, book.id, leaf); }, [leaf, uid, book.id, FIRST, LAST_PAGE]);
+  const onComplete = useCallback((r: { stars: number; score: number }) => { if (uid) recordResult(uid, book.id, { ...r, completed: true }); }, [uid, book.id]);
 
   // ---- page-flip: fold current away, swap content, unfold incoming ----
   const go = useCallback((delta: number) => {
@@ -110,7 +123,7 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
           className="relative w-full origin-left overflow-hidden rounded-2xl shadow-2xl"
           style={{ transform: `rotateY(${rot}deg)`, transformStyle: "preserve-3d", transition: snap ? "none" : "transform .25s ease-in", transformOrigin: "left center" }}
         >
-          <Leaf book={book} leaf={leaf} idx={{ COVER, TITLE, FIRST, LAST_PAGE, CHECK, BACK }} storyIndex={storyIndex} word={reading ? word : -1} onFinish={() => go(1)} onRestart={goHome} />
+          <Leaf book={book} leaf={leaf} idx={{ COVER, TITLE, FIRST, LAST_PAGE, CHECK, BACK }} storyIndex={storyIndex} word={reading ? word : -1} onFinish={() => go(1)} onRestart={goHome} onComplete={onComplete} savedProgress={Boolean(uid)} />
           {/* page-curl shading while flipping */}
           {anim && <div className="pointer-events-none absolute inset-0 rounded-2xl" style={{ background: rot < 0 ? "linear-gradient(90deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.18))" : "linear-gradient(270deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.18))" }} />}
         </div>
@@ -153,8 +166,8 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
 }
 
 // ---------------- one book leaf ----------------
-function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart }: {
-  book: StoryBook; leaf: number; idx: { COVER: number; TITLE: number; FIRST: number; LAST_PAGE: number; CHECK: number; BACK: number }; storyIndex: number; word: number; onFinish: () => void; onRestart: () => void;
+function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart, onComplete, savedProgress }: {
+  book: StoryBook; leaf: number; idx: { COVER: number; TITLE: number; FIRST: number; LAST_PAGE: number; CHECK: number; BACK: number }; storyIndex: number; word: number; onFinish: () => void; onRestart: () => void; onComplete: (r: { stars: number; score: number }) => void; savedProgress: boolean;
 }) {
   // Each leaf sizes to its own content so text is NEVER clipped — the page
   // grows taller for longer text (higher grades) instead of cutting it off.
@@ -196,13 +209,14 @@ function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart }: {
     </div>;
   }
   if (leaf === idx.CHECK) {
-    return <div className={cn(face, "flex min-h-[460px] flex-col bg-gradient-to-br from-white to-surface-soft")}><QuickCheck book={book} onFinish={onFinish} /></div>;
+    return <div className={cn(face, "flex min-h-[460px] flex-col bg-gradient-to-br from-white to-surface-soft")}><QuickCheck book={book} onFinish={onFinish} onComplete={onComplete} /></div>;
   }
   // back cover
   return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center gap-3 bg-gradient-to-br text-center")} style={{ backgroundImage: `linear-gradient(135deg, ${book.coverFrom}, ${book.coverTo})` }}>
     <div className="text-5xl">🌟</div>
     <h2 className="font-display text-3xl font-extrabold text-navy-900">The End</h2>
     <p className="max-w-xs text-sm font-semibold text-navy-600">You read <span style={{ color: book.accent }}>{book.title}</span> — great reading, mathematician!</p>
+    {savedProgress && <p className="text-xs font-semibold text-emerald-600">✓ Saved to your progress</p>}
     <Button variant="primary" onClick={onRestart} className="mt-2"><RotateCcw className="h-4 w-4" /> Read again</Button>
   </div>;
 }
@@ -215,7 +229,7 @@ function Opt({ o, big }: { o: CheckOption; big?: boolean }) {
   return <span className="font-display text-base font-bold text-navy-800">{o.text}</span>;
 }
 
-function QuickCheck({ book, onFinish }: { book: StoryBook; onFinish: () => void }) {
+function QuickCheck({ book, onFinish, onComplete }: { book: StoryBook; onFinish: () => void; onComplete?: (r: { stars: number; score: number }) => void }) {
   const items = book.check;
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
@@ -223,6 +237,13 @@ function QuickCheck({ book, onFinish }: { book: StoryBook; onFinish: () => void 
   const [done, setDone] = useState(false);
   const [wrongShake, setWrongShake] = useState<number | null>(null);
   const item: CheckItem | undefined = items[i];
+
+  // record the result once, when the check is completed
+  useEffect(() => {
+    if (!done) return;
+    const stars = correctCount === items.length ? 3 : correctCount >= items.length - 1 ? 2 : 1;
+    onComplete?.({ stars, score: Math.round((correctCount / items.length) * 100) });
+  }, [done, correctCount, items.length, onComplete]);
 
   const pick = (opt: number) => {
     if (picked !== null || done) return;
