@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
 import { EmptyState } from "@/components/ui/States";
 import { ResourceCover } from "@/components/content/ResourceCover";
+import { AssignmentInbox } from "@/components/dashboards/AssignmentInbox";
 import { studentAssignments } from "@/data/school";
 import { resources } from "@/data/resources";
 import { formatDate } from "@/lib/utils";
@@ -23,6 +24,12 @@ export default function StudentAssignments() {
   return (
     <div className="space-y-6">
       <PageHeading title="My assignments" description="Activities your teacher has set for you." />
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-bold text-navy-700">📬 New from your teacher</h2>
+        <AssignmentInbox mode="student" />
+      </section>
+
       <Tabs tabs={[{ id: "todo", label: "To do", count: todo.length }, { id: "done", label: "Completed", count: done.length }]} active={tab} onChange={setTab} className="w-fit" />
 
       {list.length === 0 ? (

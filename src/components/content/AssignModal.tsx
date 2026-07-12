@@ -8,6 +8,8 @@ import { LabelledField, Select, Input, Textarea } from "@/components/ui/Field";
 import { ResourceCover } from "./ResourceCover";
 import { classes } from "@/data/school";
 import { useToasts } from "@/stores/ui";
+import { useAssignments } from "@/stores/assignments";
+import { useAuth } from "@/stores/auth";
 import { stageLabel } from "@/lib/content";
 
 export function AssignModal({
@@ -20,6 +22,8 @@ export function AssignModal({
   onClose: () => void;
 }) {
   const notify = useToasts((s) => s.notify);
+  const assign = useAssignments((s) => s.assign);
+  const teacherName = useAuth((s) => s.user?.name ?? "Teacher");
   const [target, setTarget] = useState(classes[0]?.id ?? "");
   const [due, setDue] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -40,6 +44,7 @@ export function AssignModal({
           <Button
             onClick={() => {
               const cls = classes.find((c) => c.id === target);
+              assign({ resourceId: resource.id, classId: target, className: cls?.name ?? "class", due: due || undefined, instructions: instructions || undefined, assignedBy: teacherName });
               notify({
                 variant: "success",
                 title: "Assignment created",

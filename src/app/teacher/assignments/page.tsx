@@ -11,6 +11,7 @@ import { assignments } from "@/data/school";
 import { getResources } from "@/data/resources";
 import { formatDate } from "@/lib/utils";
 import { Plus, Calendar, Users, Target } from "lucide-react";
+import { AssignmentInbox } from "@/components/dashboards/AssignmentInbox";
 
 export default function TeacherAssignments() {
   const [tab, setTab] = useState("active");
@@ -23,6 +24,11 @@ export default function TeacherAssignments() {
         description="Track completion, performance and learning evidence across your classes."
         actions={<Button asChildHref="/teacher/assignments/create"><Plus className="h-4 w-4" /> New assignment</Button>}
       />
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-bold text-navy-700">Assigned from the library</h2>
+        <AssignmentInbox mode="teacher" />
+      </section>
 
       <Tabs
         tabs={[
