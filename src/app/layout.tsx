@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { ToastViewport } from "@/components/ui/Toast";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { brand } from "@/config/brand";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -19,6 +20,11 @@ export const metadata: Metadata = {
   },
   description: brand.supportingLine,
   applicationName: brand.name,
+  appleWebApp: { capable: true, title: "MathQuest", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1b2540",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         {children}
         <ToastViewport />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
