@@ -101,7 +101,7 @@ function Countdown({ onDone }: { onDone: () => void }) {
     return () => window.clearTimeout(t);
   }, [n, onDone]);
   return (
-    <div className="flex h-[360px] items-center justify-center">
+    <div className="flex h-[360px] items-center justify-center" role="status" aria-live="assertive" aria-label={n > 0 ? `Starting in ${n}` : "Go!"}>
       <span key={n} className="animate-[pop_.5s] font-display text-8xl font-extrabold text-navy-900">{n > 0 ? n : "GO!"}</span>
       <style>{`@keyframes pop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}`}</style>
     </div>
@@ -112,7 +112,7 @@ function Scoreboard({ np, wins, round, banner }: { np: number; wins: number[]; r
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-100 bg-surface-soft px-4 py-2">
       <span className="text-xs font-bold text-navy-500">Round {Math.min(round + 1, ROUNDS)} / {ROUNDS}</span>
-      {banner && <span className="text-sm font-extrabold text-teal-600">{banner}</span>}
+      {banner && <span className="text-sm font-extrabold text-teal-600" role="status" aria-live="polite">{banner}</span>}
       <div className="flex gap-2">
         {PC.slice(0, np).map((c, i) => (
           <span key={i} className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold text-white" style={{ background: c.hex }}>
@@ -128,7 +128,7 @@ function Winner({ np, wins, onRestart }: { np: number; wins: number[]; onRestart
   const best = Math.max(...wins.slice(0, np));
   const champs = PC.slice(0, np).map((c, i) => ({ c, i, w: wins[i] })).filter((x) => x.w === best);
   return (
-    <div className="flex flex-col items-center gap-3 p-8 text-center">
+    <div className="flex flex-col items-center gap-3 p-8 text-center" role="status" aria-live="assertive">
       <div className="animate-bounce"><Trophy className="h-16 w-16 text-accent-400" /></div>
       <h3 className="font-display text-2xl font-extrabold text-navy-900">{champs.length > 1 ? "It's a tie! 🎉" : `Player ${champs[0].i + 1} wins! 🎉`}</h3>
       <div className="flex flex-wrap justify-center gap-2">

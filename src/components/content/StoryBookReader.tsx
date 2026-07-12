@@ -196,7 +196,7 @@ function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart, onComple
       <div className="relative aspect-[16/10] w-full shrink-0 bg-gradient-to-b from-sky-50 to-white">
         <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full">{page.scene}</svg>
       </div>
-      <div className="flex flex-1 flex-col justify-center border-t border-navy-100 bg-white px-5 py-4 sm:px-7 sm:py-5">
+      <div className="flex flex-1 flex-col justify-center border-t border-navy-100 bg-white px-5 py-4 sm:px-7 sm:py-5" role="group" aria-roledescription="story page" aria-live="polite">
         <p className="font-display text-lg font-semibold leading-relaxed text-navy-800 sm:text-xl">
           {words.map((w, i) => {
             if (/\s+/.test(w)) return <span key={i}>{w}</span>;
@@ -227,6 +227,10 @@ function Opt({ o, big }: { o: CheckOption; big?: boolean }) {
   if (o.emoji) return <span className={cn(big ? "text-3xl" : "text-2xl")}>{o.emoji}</span>;
   if (o.num) return <span className="font-display text-3xl font-extrabold text-navy-900">{o.num}</span>;
   return <span className="font-display text-base font-bold text-navy-800">{o.text}</span>;
+}
+// accessible name for a picture / number / emoji answer option
+function optLabel(o: CheckOption, i: number): string {
+  return o.text ?? o.num ?? (o.emoji ? `picture answer ${i + 1}` : `answer option ${i + 1}`);
 }
 
 function QuickCheck({ book, onFinish, onComplete }: { book: StoryBook; onFinish: () => void; onComplete?: (r: { stars: number; score: number }) => void }) {
@@ -279,11 +283,11 @@ function QuickCheck({ book, onFinish, onComplete }: { book: StoryBook; onFinish:
       <span className="rounded-full bg-teal-100 px-3 py-0.5 text-xs font-bold text-teal-700">Quick check</span>
       <span className="text-xs font-bold text-navy-400">{i + 1} / {items.length}</span>
     </div>
-    <p className="mb-4 font-display text-lg font-bold text-navy-800">{item!.prompt}</p>
-    <div className={cn("grid flex-1 content-center gap-3", item!.options.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
+    <p className="mb-4 font-display text-lg font-bold text-navy-800" aria-live="polite">{item!.prompt}</p>
+    <div role="group" aria-label={item!.prompt} className={cn("grid flex-1 content-center gap-3", item!.options.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
       {item!.options.map((o, oi) => {
         const isRight = picked !== null && oi === item!.answer;
-        return <button key={oi} onClick={() => pick(oi)} disabled={picked !== null}
+        return <button key={oi} onClick={() => pick(oi)} disabled={picked !== null} aria-label={optLabel(o, oi)}
           className={cn("flex min-h-[86px] flex-col items-center justify-center gap-1 rounded-2xl border-2 bg-white p-3 transition-all",
             isRight ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-300" : "border-navy-200 hover:border-teal-400 hover:bg-teal-50",
             wrongShake === oi && "animate-[wiggle_0.4s] border-rose-400 bg-rose-50")}>
@@ -292,7 +296,7 @@ function QuickCheck({ book, onFinish, onComplete }: { book: StoryBook; onFinish:
         </button>;
       })}
     </div>
-    {wrongShake !== null && <p className="mt-2 text-center text-sm font-semibold text-amber-600">Not quite — have another try! 💪</p>}
+    {wrongShake !== null && <p className="mt-2 text-center text-sm font-semibold text-amber-600" role="status">Not quite — have another try! 💪</p>}
     <style>{`@keyframes wiggle{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}`}</style>
   </div>;
 }
