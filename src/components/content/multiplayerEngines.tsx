@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Users, Play, RotateCcw, Trophy, Crown, Droplet, Ruler, Dices, BarChart3 } from "lucide-react";
+import { Users, Play, RotateCcw, Trophy, Crown, Droplet, Ruler, Dices, BarChart3, Volume2, VolumeX } from "lucide-react";
 import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
+import { useSound } from "@/stores/sound";
 
 // ==========================================================
 // MathQuest Multiplayer — local split-screen games for 2–4
@@ -63,7 +65,10 @@ function Shell({ title, icon, children }: { title: string; icon: React.ReactNode
     <div className="overflow-hidden rounded-2xl border-2 border-navy-100 bg-white shadow-card">
       <div className="flex items-center justify-between bg-navy-900 px-4 py-2.5 text-white">
         <p className="flex items-center gap-2 text-sm font-bold sm:text-base">{icon}{title}</p>
-        <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-bold"><Users className="h-3.5 w-3.5" /> 2–4 players</span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-bold"><Users className="h-3.5 w-3.5" /> 2–4 players</span>
+          <MuteBtn />
+        </div>
       </div>
       {children}
     </div>
@@ -93,10 +98,22 @@ function Setup({ objective, howto, np, setNp, onStart }: { objective: string; ho
   );
 }
 
+function MuteBtn() {
+  const muted = useSound((s) => s.muted);
+  const setMuted = useSound((s) => s.setMuted);
+  return (
+    <button onClick={() => { const next = !muted; setMuted(next); if (!next) sfx("pop"); }} aria-label={muted ? "Unmute" : "Mute"} aria-pressed={muted}
+      className="rounded-lg bg-white/15 p-1.5 hover:bg-white/25">
+      {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
+
 function Countdown({ onDone }: { onDone: () => void }) {
   const [n, setN] = useState(3);
   useEffect(() => {
     if (n < 0) { onDone(); return; }
+    sfx(n > 0 ? "tick" : "good");
     const t = window.setTimeout(() => setN((v) => v - 1), 650);
     return () => window.clearTimeout(t);
   }, [n, onDone]);
@@ -125,6 +142,7 @@ function Scoreboard({ np, wins, round, banner }: { np: number; wins: number[]; r
 }
 
 function Winner({ np, wins, onRestart }: { np: number; wins: number[]; onRestart: () => void }) {
+  useEffect(() => { sfx("win"); }, []);
   const best = Math.max(...wins.slice(0, np));
   const champs = PC.slice(0, np).map((c, i) => ({ c, i, w: wins[i] })).filter((x) => x.w === best);
   return (
@@ -178,7 +196,7 @@ function FillItUp() {
     setFill([0, 0, 0, 0]); setDone([false, false, false, false]); setBanner("");
   }, []);
   const begin = () => { setWins([0, 0, 0, 0]); setRound(0); setPhase("count"); };
-  const pour = (p: number) => { if (done[p] || phase !== "play") return; setFill((f) => f.map((v, i) => i === p ? Math.min(MAX, v + POUR) : v)); };
+  const pour = (p: number) => { if (done[p] || phase !== "play") return; setFill((f) => f.map((v, i) => i === p ? Math.min(MAX, v + POUR) : v)); sfx("pop"); };
   const stop = (p: number) => setDone((d) => d.map((v, i) => i === p ? true : v));
   usePlayerKeys(phase === "play", np, pour);
 
@@ -188,7 +206,7 @@ function FillItUp() {
       // closest without going over MAX-tolerance; overflow busts
       let best = -1, bestDiff = 1e9;
       for (let i = 0; i < np; i++) { const over = fill[i] > MAX; const diff = Math.abs(fill[i] - target); if (!over && diff < bestDiff) { bestDiff = diff; best = i; } }
-      if (best >= 0) { setWins((w) => w.map((v, i) => i === best ? v + 1 : v)); setBanner(`Player ${best + 1} poured closest to ${target} mL!`); }
+      if (best >= 0) { setWins((w) => w.map((v, i) => i === best ? v + 1 : v)); setBanner(`Player ${best + 1} poured closest to ${target} mL!`); sfx("good"); }
       else setBanner("Everyone overflowed! No point this round.");
       const t = window.setTimeout(() => {
         if (round + 1 >= ROUNDS) setPhase("over");
@@ -248,7 +266,7 @@ function StopLength() {
     setTarget(6 + Math.floor(Math.random() * 12)); setLen([0, 0, 0, 0]); setDone([false, false, false, false]); setBanner("");
   }, []);
   const begin = () => { setWins([0, 0, 0, 0]); setRound(0); setPhase("count"); };
-  const stopBar = (p: number) => { if (phase !== "play") return; setDone((d) => d.map((v, i) => i === p ? true : v)); };
+  const stopBar = (p: number) => { if (phase !== "play") return; setDone((d) => d.map((v, i) => i === p ? true : v)); sfx("pop"); };
   usePlayerKeys(phase === "play", np, stopBar);
 
   // bars grow while not stopped
@@ -264,7 +282,7 @@ function StopLength() {
       let best = -1, bestDiff = 1e9;
       for (let i = 0; i < np; i++) { const diff = Math.abs(len[i] - target); if (diff < bestDiff) { bestDiff = diff; best = i; } }
       setWins((w) => w.map((v, i) => i === best ? v + 1 : v));
-      setBanner(`Player ${best + 1} stopped closest to ${target} cm!`);
+      setBanner(`Player ${best + 1} stopped closest to ${target} cm!`); sfx("good");
       const t = window.setTimeout(() => { if (round + 1 >= ROUNDS) setPhase("over"); else { setRound((r) => r + 1); startRound(); } }, 1900);
       return () => window.clearTimeout(t);
     }
@@ -316,7 +334,7 @@ function ProbabilityArena() {
 
   const begin = () => { setWins([0, 0, 0, 0]); setRound(0); newBet(); };
   const newBet = () => { setBet([-1, -1, -1, -1]); setTally([0, 0, 0, 0]); setTrial(0); setBanner(""); setPhase("bet"); };
-  const choose = (p: number, seg: number) => { if (phase !== "bet") return; setBet((b) => b.map((v, i) => i === p ? seg : v)); };
+  const choose = (p: number, seg: number) => { if (phase !== "bet") return; setBet((b) => b.map((v, i) => i === p ? seg : v)); sfx("tick"); };
   const allBet = bet.slice(0, np).every((v) => v >= 0);
 
   // run trials
@@ -404,7 +422,7 @@ function DataDuel() {
   const sort = (p: number, bin: number) => {
     if (phase !== "play") return;
     const item = FRUIT[cur[p]];
-    if (item.k === bin) { setBins((b) => b.map((row, i) => i === p ? row.map((v, j) => j === bin ? v + 1 : v) : row)); setCorrect((c) => c.map((v, i) => i === p ? v + 1 : v)); }
+    if (item.k === bin) { setBins((b) => b.map((row, i) => i === p ? row.map((v, j) => j === bin ? v + 1 : v) : row)); setCorrect((c) => c.map((v, i) => i === p ? v + 1 : v)); sfx("pop"); }
     setCur((cc) => cc.map((v, i) => i === p ? rnd() : v));
   };
 

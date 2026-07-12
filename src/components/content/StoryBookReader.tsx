@@ -8,6 +8,7 @@ import type { StoryBook, CheckItem, CheckOption } from "@/data/storybooks";
 import { StoryCover } from "./BookCover";
 import { useAuth } from "@/stores/auth";
 import { progressFor, saveBookPage, recordResult } from "@/lib/repository";
+import { sfx } from "@/lib/sound";
 
 // ==========================================================
 // StoryBookReader — a polished interactive e-book: page-flip,
@@ -46,6 +47,7 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
     const cur = leafRef.current;
     const ni = clamp(cur + delta, 0, LEAVES - 1);
     if (ni === cur || animRef.current) return;
+    sfx("tick");
     animRef.current = true; setAnim(true); setSnap(false); setRot(delta > 0 ? -92 : 92);
     window.setTimeout(() => {
       setSnap(true); setLeaf(ni); leafRef.current = ni; setRot(delta > 0 ? 92 : -92);
@@ -251,6 +253,7 @@ function QuickCheck({ book, onFinish, onComplete }: { book: StoryBook; onFinish:
   // record the result once, when the check is completed
   useEffect(() => {
     if (!done) return;
+    sfx("win");
     const stars = correctCount === items.length ? 3 : correctCount >= items.length - 1 ? 2 : 1;
     onComplete?.({ stars, score: Math.round((correctCount / items.length) * 100) });
   }, [done, correctCount, items.length, onComplete]);
@@ -258,13 +261,13 @@ function QuickCheck({ book, onFinish, onComplete }: { book: StoryBook; onFinish:
   const pick = (opt: number) => {
     if (picked !== null || done) return;
     if (opt === item!.answer) {
-      setPicked(opt); setCorrect((c) => c + 1);
+      setPicked(opt); setCorrect((c) => c + 1); sfx("good");
       window.setTimeout(() => {
         if (i + 1 < items.length) { setI(i + 1); setPicked(null); }
         else setDone(true);
       }, 850);
     } else {
-      setWrongShake(opt);
+      setWrongShake(opt); sfx("bad");
       window.setTimeout(() => setWrongShake(null), 450);
     }
   };

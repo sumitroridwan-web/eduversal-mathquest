@@ -9,6 +9,7 @@ import { useToasts } from "@/stores/ui";
 import { cn, clamp } from "@/lib/utils";
 import { simPreset } from "@/config/simPresets";
 import { craFor } from "@/lib/cra";
+import { sfx } from "@/lib/sound";
 import { PresentStage } from "./PresentStage";
 
 // Concrete "fruit" counter for Early Years / lower grades (CRA — concrete);
@@ -150,6 +151,9 @@ function Frac({ n, d, className }: { n: React.ReactNode; d: React.ReactNode; cla
 function Challenges({ tasks }: { tasks: { label: string; done: boolean }[] }) {
   const [on, setOn] = useState(false);
   const [i, setI] = useState(0);
+  const idx0 = tasks.length ? i % tasks.length : 0;
+  const doneNow = tasks[idx0]?.done ?? false;
+  useEffect(() => { if (on && doneNow) sfx("good"); }, [on, doneNow]);
   if (tasks.length === 0) return null;
   const idx = i % tasks.length, t = tasks[idx];
   return (

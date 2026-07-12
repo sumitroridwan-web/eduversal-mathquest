@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { RotateCcw, Heart, Trophy, Play, Star, Coins, Volume2, VolumeX } from "lucide-react";
+import { sfx, type Sfx } from "@/lib/sound";
+import { useSound } from "@/stores/sound";
 import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
@@ -25,47 +27,12 @@ const rnd = (n: number) => Math.floor(Math.random() * n);
 function shuffle<T>(a: T[]): T[] { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = rnd(i + 1); const t = b[i]; b[i] = b[j]; b[j] = t; } return b; }
 function distinct(count: number, max: number, min = 1): number[] { const s = new Set<number>(); let guard = 0; while (s.size < count && guard++ < 500) s.add(min + rnd(max - min + 1)); return [...s]; }
 
-// ---------------- sound (Web Audio, synthesised, no files) ----------------
-type Sfx = "good" | "bad" | "win" | "lose" | "tick" | "pop";
-let _ac: AudioContext | null = null;
-function audioCtx(): AudioContext | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return null;
-    if (!_ac) _ac = new AC();
-    if (_ac.state === "suspended") void _ac.resume();
-    return _ac;
-  } catch { return null; }
-}
-function tone(freq: number, start: number, dur: number, type: OscillatorType = "sine", gain = 0.14) {
-  const c = audioCtx(); if (!c) return;
-  const t0 = c.currentTime + start;
-  const osc = c.createOscillator(); const g = c.createGain();
-  osc.type = type; osc.frequency.setValueAtTime(freq, t0);
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(gain, t0 + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(g); g.connect(c.destination);
-  osc.start(t0); osc.stop(t0 + dur + 0.03);
-}
-function playSfx(name: Sfx) {
-  switch (name) {
-    case "good": tone(660, 0, 0.12, "triangle"); tone(990, 0.08, 0.14, "triangle"); break;
-    case "pop": tone(520, 0, 0.09, "square", 0.1); break;
-    case "tick": tone(320, 0, 0.05, "square", 0.07); break;
-    case "bad": tone(180, 0, 0.2, "sawtooth", 0.11); break;
-    case "win": [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.22, "triangle")); break;
-    case "lose": [392, 311, 247].forEach((f, i) => tone(f, i * 0.14, 0.26, "sawtooth", 0.11)); break;
-  }
-}
-
-// ---------------- shared settings context ----------------
+// ---------------- shared settings context (sound is global — lib/sound) ----------------
 type Diff = "easy" | "normal" | "hard";
 const DIFF_OFFSET: Record<Diff, number> = { easy: -2, normal: 0, hard: 2 };
 const DIFF_LABEL: Record<Diff, string> = { easy: "Easy", normal: "Normal", hard: "Hard" };
 
-type GameSettings = { diff: Diff; setDiff: (d: Diff) => void; muted: boolean; setMuted: (m: boolean) => void; sfx: (n: Sfx) => void };
+type GameSettings = { diff: Diff; setDiff: (d: Diff) => void; sfx: (n: Sfx) => void };
 const GameCtx = createContext<GameSettings | null>(null);
 function useGame(): GameSettings {
   const v = useContext(GameCtx);
@@ -80,23 +47,17 @@ function useDiffGrade(resource: Resource): number {
 
 export function GameEngine({ resource }: { resource: Resource }) {
   const [diff, setDiff] = useState<Diff>("normal");
-  const [muted, setMuted] = useState(false);
-  const mutedRef = useRef(muted);
-  mutedRef.current = muted;
 
-  // load persisted preferences after mount (avoids SSR hydration mismatch)
+  // load persisted difficulty after mount (avoids SSR hydration mismatch)
   useEffect(() => {
     try {
       const d = window.localStorage.getItem("mq-game-diff");
       if (d === "easy" || d === "normal" || d === "hard") setDiff(d);
-      setMuted(window.localStorage.getItem("mq-game-muted") === "1");
     } catch { /* ignore */ }
   }, []);
   useEffect(() => { try { window.localStorage.setItem("mq-game-diff", diff); } catch { /* ignore */ } }, [diff]);
-  useEffect(() => { try { window.localStorage.setItem("mq-game-muted", muted ? "1" : "0"); } catch { /* ignore */ } }, [muted]);
 
-  const sfx = useCallback((n: Sfx) => { if (!mutedRef.current) playSfx(n); }, []);
-  const value = useMemo<GameSettings>(() => ({ diff, setDiff, muted, setMuted, sfx }), [diff, muted, sfx]);
+  const value = useMemo<GameSettings>(() => ({ diff, setDiff, sfx }), [diff]);
 
   return (
     <GameCtx.Provider value={value}>
@@ -143,7 +104,8 @@ function DiffPicker() {
   );
 }
 function MuteButton() {
-  const { muted, setMuted, sfx } = useGame();
+  const muted = useSound((s) => s.muted);
+  const setMuted = useSound((s) => s.setMuted);
   return (
     <button onClick={() => { const next = !muted; setMuted(next); if (!next) sfx("pop"); }} aria-label={muted ? "Unmute" : "Mute"} aria-pressed={muted}
       className="rounded-lg bg-white/15 p-1.5 hover:bg-white/25">
