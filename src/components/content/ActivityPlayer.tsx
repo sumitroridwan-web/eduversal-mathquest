@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Check, X, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
 import type { Resource } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useToasts } from "@/stores/ui";
 import { cn } from "@/lib/utils";
-import { SimulationEngine } from "./simEngines";
-import { GameEngine } from "./gameEngines";
 import { PresentStage } from "./PresentStage";
-import { StoryBookReader } from "./StoryBookReader";
 import { getStorybook } from "@/data/storybooks";
 import { ActivityErrorBoundary } from "./ActivityErrorBoundary";
-import { useEffect } from "react";
 import { track } from "@/lib/analytics";
 import { answersMatch } from "@/lib/answers";
 import { useAuth } from "@/stores/auth";
 import { useProgress } from "@/stores/progress";
+
+// Engines are heavy and mutually exclusive per activity — load only the
+// one this activity needs, so opening a game doesn't ship the sim/book code.
+const EngineLoading = () => (
+  <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-navy-100 bg-white shadow-card">
+    <span className="animate-pulse text-sm font-semibold text-navy-400">Loading activity…</span>
+  </div>
+);
+const GameEngine = dynamic(() => import("./gameEngines").then((m) => ({ default: m.GameEngine })), { ssr: false, loading: EngineLoading });
+const SimulationEngine = dynamic(() => import("./simEngines").then((m) => ({ default: m.SimulationEngine })), { ssr: false, loading: EngineLoading });
+const StoryBookReader = dynamic(() => import("./StoryBookReader").then((m) => ({ default: m.StoryBookReader })), { ssr: false, loading: EngineLoading });
 
 /**
  * The activity player adapts to the resource type: bespoke interactive
