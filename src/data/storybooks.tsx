@@ -384,9 +384,10 @@ const smoothie: StoryBook = {
 
 import { extraBooks } from "./storybooksExtra";
 import { extraBooks2 } from "./storybooksExtra2";
+import { extraBooks3 } from "./storybooksExtra3";
 
 const baseBooks: StoryBook[] = [nurseryDucks, countingGarden, patternParade, shapeCity, marketDay, clockTower, roboBakery, fractionFeast, dataDetectives, smoothie];
-export const storybooks: StoryBook[] = [...baseBooks, ...extraBooks, ...extraBooks2];
+export const storybooks: StoryBook[] = [...baseBooks, ...extraBooks, ...extraBooks2, ...extraBooks3];
 
 export function getStorybook(id: string): StoryBook | undefined {
   return storybooks.find((b) => b.id === id);
