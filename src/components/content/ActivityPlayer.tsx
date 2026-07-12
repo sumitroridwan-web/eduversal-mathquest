@@ -12,13 +12,27 @@ import { GameEngine } from "./gameEngines";
 import { PresentStage } from "./PresentStage";
 import { StoryBookReader } from "./StoryBookReader";
 import { getStorybook } from "@/data/storybooks";
+import { ActivityErrorBoundary } from "./ActivityErrorBoundary";
+import { useEffect } from "react";
+import { track } from "@/lib/analytics";
+import { answersMatch } from "@/lib/answers";
 
 /**
  * The activity player adapts to the resource type: bespoke interactive
  * manipulatives for simulations, a real game-genre engine for games, and a
  * paged reader with checkpoints for books. Every control works (no dead buttons).
+ * Each activity is wrapped in an error boundary so one crash can't blank the page.
  */
 export function ActivityPlayer({ resource }: { resource: Resource }) {
+  useEffect(() => { track("activity_open", { resourceId: resource.id, type: resource.type }); }, [resource.id, resource.type]);
+  return (
+    <ActivityErrorBoundary resourceId={resource.id} title={resource.title}>
+      <ActivityBody resource={resource} />
+    </ActivityErrorBoundary>
+  );
+}
+
+function ActivityBody({ resource }: { resource: Resource }) {
   if (resource.type === "book") {
     const storybook = getStorybook(resource.id);
     if (storybook) {
@@ -52,7 +66,7 @@ function BookReader({ resource }: { resource: Resource }) {
 
   const check = () => {
     if (!checkpoint) return;
-    const correct = answer.trim().toLowerCase() === checkpoint.answer.toLowerCase();
+    const correct = answersMatch(answer, checkpoint.answer);
     setChecked(correct);
     notify({
       variant: correct ? "success" : "info",

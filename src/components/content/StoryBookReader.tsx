@@ -59,7 +59,9 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
   const [reading, setReading] = useState(false);
   const [paused, setPaused] = useState(false);
   const [word, setWord] = useState(-1);
+  const [slow, setSlow] = useState(false);
   const readingRef = useRef(false);
+  const slowRef = useRef(false); slowRef.current = slow;
   const stop = useCallback(() => {
     readingRef.current = false; setReading(false); setPaused(false); setWord(-1);
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
@@ -71,7 +73,7 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
     const text = page.narration ?? page.text;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.9; u.pitch = 1.1;
+    u.rate = slowRef.current ? 0.7 : 0.95; u.pitch = 1.1;
     // word-boundary highlight (map char index → word index)
     const words = text.split(/\s+/);
     const starts: number[] = []; let c = 0;
@@ -143,13 +145,17 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
           <Button variant="ghost" size="sm" onClick={goHome} aria-label="Cover"><Home className="h-4 w-4" /></Button>
         </div>
 
-        {/* read-aloud (EY & G1 books) */}
-        {book.audio && isStory && (
+        {/* read-aloud — available on every book (EY & G1 also get the cover badge) */}
+        {isStory && (
           <div className="flex items-center gap-2">
             {!reading
               ? <Button variant="accent" size="sm" onClick={readToMe}><Volume2 className="h-4 w-4" /> Read to me</Button>
               : <><Button variant="outline" size="sm" onClick={togglePause}>{paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}{paused ? "Play" : "Pause"}</Button>
                 <Button variant="ghost" size="sm" onClick={replay} aria-label="Replay"><RotateCcw className="h-4 w-4" /></Button></>}
+            <button onClick={() => setSlow((v) => !v)} aria-pressed={slow} title="Reading speed"
+              className={cn("rounded-lg border px-2 py-1 text-xs font-bold transition-colors", slow ? "border-teal-500 bg-teal-50 text-teal-700" : "border-navy-200 text-navy-500 hover:border-teal-400")}>
+              {slow ? "🐢 Slower" : "🐇 Normal"}
+            </button>
           </div>
         )}
 
