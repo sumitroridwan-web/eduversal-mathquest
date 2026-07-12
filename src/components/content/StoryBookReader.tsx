@@ -107,7 +107,7 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
       {/* book stage */}
       <div className="relative select-none" style={{ perspective: 1800 }}>
         <div
-          className="relative aspect-[4/3] w-full origin-left rounded-2xl shadow-2xl"
+          className="relative w-full origin-left overflow-hidden rounded-2xl shadow-2xl"
           style={{ transform: `rotateY(${rot}deg)`, transformStyle: "preserve-3d", transition: snap ? "none" : "transform .25s ease-in", transformOrigin: "left center" }}
         >
           <Leaf book={book} leaf={leaf} idx={{ COVER, TITLE, FIRST, LAST_PAGE, CHECK, BACK }} storyIndex={storyIndex} word={reading ? word : -1} onFinish={() => go(1)} onRestart={goHome} />
@@ -156,13 +156,15 @@ export function StoryBookReader({ book, initialLeaf = 0 }: { book: StoryBook; in
 function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart }: {
   book: StoryBook; leaf: number; idx: { COVER: number; TITLE: number; FIRST: number; LAST_PAGE: number; CHECK: number; BACK: number }; storyIndex: number; word: number; onFinish: () => void; onRestart: () => void;
 }) {
-  const face = "absolute inset-0 overflow-hidden rounded-2xl";
+  // Each leaf sizes to its own content so text is NEVER clipped — the page
+  // grows taller for longer text (higher grades) instead of cutting it off.
+  const face = "relative w-full overflow-hidden rounded-2xl";
   if (leaf === idx.COVER) {
-    return <div className={cn(face, "bg-white")}><StoryCover book={book} mode="full" className="h-full w-full" />
+    return <div className={cn(face, "bg-white")}><StoryCover book={book} mode="full" className="aspect-[4/3] w-full" />
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 animate-pulse rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-navy-700 shadow">Tap the page to open →</div></div>;
   }
   if (leaf === idx.TITLE) {
-    return <div className={cn(face, "flex flex-col items-center justify-center bg-gradient-to-br p-6 text-center")} style={{ backgroundImage: `linear-gradient(135deg, ${book.coverFrom}, ${book.coverTo})` }}>
+    return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center bg-gradient-to-br p-6 text-center")} style={{ backgroundImage: `linear-gradient(135deg, ${book.coverFrom}, ${book.coverTo})` }}>
       <BookOpen className="mb-3 h-9 w-9" style={{ color: book.accent }} />
       <h2 className="font-display text-2xl font-extrabold text-navy-900 sm:text-3xl">{book.title}</h2>
       <p className="mt-1 text-sm font-semibold text-navy-500">{book.subtitle}</p>
@@ -178,26 +180,26 @@ function Leaf({ book, leaf, idx, storyIndex, word, onFinish, onRestart }: {
     const words = (page.text).split(/(\s+)/);
     let wc = -1;
     return <div className={cn(face, "flex flex-col bg-white")}>
-      <div className="relative flex-1 bg-gradient-to-b from-sky-50 to-white">
-        <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" className="h-full w-full">{page.scene}</svg>
+      <div className="relative aspect-[16/10] w-full shrink-0 bg-gradient-to-b from-sky-50 to-white">
+        <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full">{page.scene}</svg>
       </div>
-      <div className="border-t border-navy-100 bg-white px-5 py-3">
-        <p className="font-display text-lg font-semibold leading-snug text-navy-800 sm:text-xl">
+      <div className="flex flex-1 flex-col justify-center border-t border-navy-100 bg-white px-5 py-4 sm:px-7 sm:py-5">
+        <p className="font-display text-lg font-semibold leading-relaxed text-navy-800 sm:text-xl">
           {words.map((w, i) => {
             if (/\s+/.test(w)) return <span key={i}>{w}</span>;
             wc++;
             return <span key={i} className={cn("rounded transition-colors", word === wc && "bg-accent-200 px-0.5")}>{w}</span>;
           })}
         </p>
-        <span className="mt-1 block text-right text-xs font-bold text-navy-300">{storyIndex + 1} / {book.pages.length}</span>
+        <span className="mt-2 block text-right text-xs font-bold text-navy-300">{storyIndex + 1} / {book.pages.length}</span>
       </div>
     </div>;
   }
   if (leaf === idx.CHECK) {
-    return <div className={cn(face, "bg-gradient-to-br from-white to-surface-soft")}><QuickCheck book={book} onFinish={onFinish} /></div>;
+    return <div className={cn(face, "flex min-h-[460px] flex-col bg-gradient-to-br from-white to-surface-soft")}><QuickCheck book={book} onFinish={onFinish} /></div>;
   }
   // back cover
-  return <div className={cn(face, "flex flex-col items-center justify-center gap-3 bg-gradient-to-br text-center")} style={{ backgroundImage: `linear-gradient(135deg, ${book.coverFrom}, ${book.coverTo})` }}>
+  return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center gap-3 bg-gradient-to-br text-center")} style={{ backgroundImage: `linear-gradient(135deg, ${book.coverFrom}, ${book.coverTo})` }}>
     <div className="text-5xl">🌟</div>
     <h2 className="font-display text-3xl font-extrabold text-navy-900">The End</h2>
     <p className="max-w-xs text-sm font-semibold text-navy-600">You read <span style={{ color: book.accent }}>{book.title}</span> — great reading, mathematician!</p>
@@ -239,7 +241,7 @@ function QuickCheck({ book, onFinish }: { book: StoryBook; onFinish: () => void 
 
   if (done) {
     const all = correctCount === items.length;
-    return <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+    return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
       <div className="animate-bounce"><Trophy className="h-16 w-16 text-accent-400" /></div>
       <h3 className="font-display text-2xl font-extrabold text-navy-900">{all ? "Perfect! 🎉" : "Well done! 🌟"}</h3>
       <p className="text-sm font-semibold text-navy-600">You got {correctCount} of {items.length}.</p>
@@ -251,7 +253,7 @@ function QuickCheck({ book, onFinish }: { book: StoryBook; onFinish: () => void 
     </div>;
   }
 
-  return <div className="flex h-full flex-col p-5">
+  return <div className="flex flex-1 flex-col p-5">
     <div className="mb-1 flex items-center justify-between">
       <span className="rounded-full bg-teal-100 px-3 py-0.5 text-xs font-bold text-teal-700">Quick check</span>
       <span className="text-xs font-bold text-navy-400">{i + 1} / {items.length}</span>
