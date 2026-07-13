@@ -37,15 +37,17 @@ export const sampleBook: StoryBook = {
   cover: <R.Painterly seed={1}>
     <R.Room from="#fff1e6" to="#ffd7cc" floor="#e8b98a" k="cov" /><R.Confetti seed={2} />
     <R.Cake cx={160} cy={116} r={42} candles={3} k="covc" />
-    <R.RichKid x={90} y={170} s={1.15} k="covm" {...MIA} expr="excited" arm="up" />
-    <R.RichKid x={232} y={170} s={1.15} k="covt" {...TARA} expr="happy" arm="up" flip />
+    <R.RichKid x={88} y={172} s={1.18} k="covm" {...MIA} expr="excited" arm="up" />
+    <R.RichKid x={234} y={172} s={1.18} k="covt" {...TARA} expr="happy" arm="wave" flip />
   </R.Painterly>,
   pages: [
     {
       text: "Mia moves into a new home. Knock, knock! Who is at the door?",
       narration: "Mia moves into a new home. Knock, knock! Who is at the door?",
-      scene: <R.Painterly seed={2}><R.Room from="#fdeede" to="#f7d6c2" floor="#e0ac7a" k="p1" /><R.Window x={258} y={40} /><R.Plant x={44} y={162} /><R.Door x={116} />
-        <R.RichKid x={200} y={168} s={1.3} k="p1m" {...MIA} expr="surprised" look={-0.6} /></R.Painterly>,
+      scene: <R.Painterly seed={2}><R.Room from="#fdeede" to="#f7d6c2" floor="#e0ac7a" k="p1" /><R.Window x={262} y={42} /><R.Plant x={40} y={162} /><R.Door x={118} />
+        {/* moving-in box */}
+        <g><rect x={236} y={150} width={40} height={30} rx={2} fill="#d9a066" stroke="#a97a45" strokeWidth={2} /><path d="M236 160 H276 M256 150 V180" stroke="#a97a45" strokeWidth={2} /><path d="M246 150 q10 -8 20 0" fill="none" stroke="#c99a6a" strokeWidth={2} /></g>
+        <R.RichKid x={198} y={168} s={1.32} k="p1m" {...MIA} expr="surprised" look={-0.7} /></R.Painterly>,
     },
     {
       text: "It is Tomo and Tara! \"Welcome!\" they cheer, holding out a big round cake.",
@@ -57,17 +59,17 @@ export const sampleBook: StoryBook = {
     },
     {
       text: "Two friends want to share. Mia cuts the cake into 2 equal parts. Each half is exactly the same size.",
-      scene: <g><R.Painterly seed={4}><R.Room from="#fdeede" to="#f7d9c8" floor="#e0ac7a" k="p3" /><R.Rug />
-        <R.Cake cx={132} cy={112} r={46} parts={2} k="p3c" />
-        <R.RichKid x={288} y={186} s={0.95} k="p3m" {...MIA} expr="happy" /></R.Painterly>
-        {T(244, 96, "2 halves", 22, "#a11a52")}{T(244, 124, "equal parts", 13, "#199473")}</g>,
+      scene: <g><R.Painterly seed={4}><R.Room from="#fdeede" to="#f7d9c8" floor="#e0ac7a" k="p3" /><R.Rug cx={140} cy={196} w={210} />
+        <R.Cake cx={126} cy={116} r={50} parts={2} k="p3c" />
+        <R.RichKid x={256} y={176} s={1.12} k="p3m" {...MIA} expr="happy" look={-0.6} arm="up" /></R.Painterly>
+        {T(252, 64, "2 halves", 24, "#a11a52")}{T(252, 90, "equal parts", 14, "#199473")}</g>,
     },
     {
       text: "Then one more friend arrives! Now they cut the cake into 4 equal parts — four fair quarters.",
-      scene: <g><R.Painterly seed={5}><R.Room from="#fff0e0" to="#ffd7cc" floor="#e8b98a" k="p4" /><R.Rug fill="#c7e59a" />
-        <R.Cake cx={132} cy={112} r={46} parts={4} k="p4c" />
-        <R.RichKid x={288} y={186} s={0.95} k="p4t" {...TOMO} expr="excited" /></R.Painterly>
-        {T(244, 96, "4 quarters", 22, "#a11a52")}{T(244, 124, "all the same", 13, "#199473")}</g>,
+      scene: <g><R.Painterly seed={5}><R.Room from="#fff0e0" to="#ffd7cc" floor="#e8b98a" k="p4" /><R.Rug cx={140} cy={196} w={210} fill="#c7e59a" />
+        <R.Cake cx={126} cy={116} r={50} parts={4} k="p4c" />
+        <R.RichKid x={256} y={176} s={1.12} k="p4t" {...TOMO} expr="excited" arm="up" /></R.Painterly>
+        {T(252, 64, "4 quarters", 24, "#a11a52")}{T(252, 90, "all the same", 14, "#199473")}</g>,
     },
     {
       text: "Everyone gets a fair, equal slice. \"Sharing is sweet!\" they all laugh together.",

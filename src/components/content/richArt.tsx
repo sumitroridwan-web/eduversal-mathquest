@@ -70,7 +70,7 @@ function hairShape(style: Hair, r: number, hair: string) {
 export function RichKid({ x = 0, y = 0, s = 1, k = "0", skin = "#c68642", hair = "#2a1a12", hairStyle = "short", shirt = "#e07aa0", expr = "happy", look = 0, arm = "down", flip = false }: {
   x?: number; y?: number; s?: number; k?: string; skin?: string; hair?: string; hairStyle?: Hair; shirt?: string; expr?: Expr; look?: number; arm?: "down" | "up" | "wave"; flip?: boolean;
 }) {
-  const hr = 21; // head radius
+  const hr = 22.5; // head radius (bigger = cuter, child-like proportions)
   return (
     <g transform={`translate(${x} ${y}) scale(${s * (flip ? -1 : 1)}, ${s})`}>
       <defs>
@@ -104,21 +104,23 @@ export function RichKid({ x = 0, y = 0, s = 1, k = "0", skin = "#c68642", hair =
 // illustration, plus a warm paper-grain texture and a soft vignette on top.
 // Keep text labels OUTSIDE this so they stay crisp.
 export function Painterly({ children, seed = 1 }: { children: React.ReactNode; seed?: number }) {
-  const p = `pt${seed}`, g = `gr${seed}`, v = `vg${seed}`;
+  const p = `pt${seed}`, g = `gr${seed}`, v = `vg${seed}`, hl = `hl${seed}`;
   return <g>
     <defs>
       <filter id={p} x="-8%" y="-8%" width="116%" height="116%">
-        <feTurbulence type="turbulence" baseFrequency="0.011" numOctaves={2} seed={seed} result="n" />
-        <feDisplacementMap in="SourceGraphic" in2="n" scale={3} xChannelSelector="R" yChannelSelector="G" />
+        <feTurbulence type="turbulence" baseFrequency="0.01" numOctaves={2} seed={seed} result="n" />
+        <feDisplacementMap in="SourceGraphic" in2="n" scale={2.3} xChannelSelector="R" yChannelSelector="G" />
       </filter>
       <filter id={g} x="0" y="0" width="100%" height="100%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves={2} seed={seed + 7} result="nn" />
-        <feColorMatrix in="nn" type="matrix" values="0 0 0 0 0.28  0 0 0 0 0.18  0 0 0 0 0.13  0 0 0 0.4 0" />
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} seed={seed + 7} result="nn" />
+        <feColorMatrix in="nn" type="matrix" values="0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0.32 0" />
       </filter>
-      <radialGradient id={v} cx="50%" cy="40%" r="78%"><stop offset="52%" stopColor="#5a3a2a" stopOpacity="0" /><stop offset="100%" stopColor="#5a3a2a" stopOpacity="0.17" /></radialGradient>
+      <radialGradient id={v} cx="50%" cy="42%" r="78%"><stop offset="55%" stopColor="#5a3a2a" stopOpacity="0" /><stop offset="100%" stopColor="#5a3a2a" stopOpacity="0.15" /></radialGradient>
+      <radialGradient id={hl} cx="50%" cy="14%" r="62%"><stop offset="0%" stopColor="#fff6e6" stopOpacity="0.4" /><stop offset="100%" stopColor="#fff6e6" stopOpacity="0" /></radialGradient>
     </defs>
     <g filter={`url(#${p})`}>{children}</g>
-    <rect x={0} y={0} width={320} height={220} filter={`url(#${g})`} style={{ mixBlendMode: "multiply" }} opacity={0.5} />
+    <rect x={0} y={0} width={320} height={220} fill={`url(#${hl})`} style={{ mixBlendMode: "soft-light" }} />
+    <rect x={0} y={0} width={320} height={220} filter={`url(#${g})`} style={{ mixBlendMode: "multiply" }} opacity={0.4} />
     <rect x={0} y={0} width={320} height={220} fill={`url(#${v})`} />
   </g>;
 }
@@ -163,22 +165,33 @@ export const Balloon = ({ x = 40, y = 60, fill = "#ff6b9d", k = "b" }: { x?: num
   <ellipse cx={x} cy={y} rx={14} ry={17} fill={`url(#bg${k})`} /><path d={`M${x} ${y + 17} l-3 4 h6 Z`} fill={fill} /><path d={`M${x} ${y + 21} q6 16 0 34`} fill="none" stroke="#c9a9b5" strokeWidth={1.2} />
 </g>;
 
-// A decorated round cake, optionally sliced into `parts`, with candles.
+// A cherry with a highlight (top-down).
+const cherry = (x: number, y: number, s = 1) => <g><circle cx={x} cy={y} r={4.5 * s} fill="#d63a5a" /><circle cx={x - 1.3 * s} cy={y - 1.3 * s} r={1.5 * s} fill="#ff9db0" /></g>;
+
+// A decorated round frosted cake (top-down), optionally cut into `parts`.
 export function Cake({ cx = 160, cy = 120, r = 48, parts = 1, candles = 0, k = "c" }: { cx?: number; cy?: number; r?: number; parts?: number; candles?: number; k?: string }) {
-  const sponge = "#ffdca8", cream = "#fff2df", frost = "#f6a5c0";
+  const sponge = "#ffe9c4", frost = "#ffc2da", frostD = "#f18cb4", plate = "#f4eee6";
   const slices = parts > 1 ? Array.from({ length: parts }).map((_, i) => {
     const a0 = (i / parts) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / parts) * 2 * Math.PI - Math.PI / 2;
     const p = (a: number) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-    const [x0, y0] = p(a0), [x1, y1] = p(a1);
-    return <path key={i} d={`M${cx} ${cy} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`} fill={sponge} stroke={darken(frost, 0.1)} strokeWidth={2} />;
+    const [x0, y0] = p(a0), [x1, y1] = p(a1); const am = (a0 + a1) / 2;
+    return <g key={i}><path d={`M${cx} ${cy} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`} fill={sponge} stroke={frostD} strokeWidth={2.5} />{cherry(cx + r * 0.62 * Math.cos(am), cy + r * 0.62 * Math.sin(am))}</g>;
   }) : null;
   return <g>
-    <defs><radialGradient id={`cake${k}`} cx="42%" cy="34%" r="70%"><stop offset="0" stopColor={lighten(frost, 0.35)} /><stop offset="1" stopColor={frost} /></radialGradient></defs>
-    <ellipse cx={cx} cy={cy + r * 0.9} rx={r + 8} ry={r * 0.28} fill="#3a2a2a" opacity={0.1} />
-    <circle cx={cx} cy={cy} r={r + 6} fill={`url(#cake${k})`} />
-    {parts > 1 ? slices : <><circle cx={cx} cy={cy} r={r} fill={sponge} /><circle cx={cx} cy={cy} r={r} fill="none" stroke={cream} strokeWidth={5} /></>}
-    {parts <= 1 && Array.from({ length: 10 }).map((_, i) => { const a = (i / 10) * 2 * Math.PI; return <circle key={i} cx={cx + (r + 3) * Math.cos(a)} cy={cy + (r + 3) * Math.sin(a)} r={4} fill="#fff" opacity={0.9} />; })}
-    {Array.from({ length: parts > 1 ? parts : 6 }).map((_, i) => { const a = ((i + 0.5) / (parts > 1 ? parts : 6)) * 2 * Math.PI - Math.PI / 2; return <circle key={i} cx={cx + r * 0.55 * Math.cos(a)} cy={cy + r * 0.55 * Math.sin(a)} r={4.5} fill="#e0466f" />; })}
-    {Array.from({ length: candles }).map((_, i) => { const x = cx - (candles - 1) * 8 + i * 16; return <g key={i}><rect x={x - 2} y={cy - r - 18} width={4} height={16} rx={1} fill={["#4fc3f7", "#ffd84d", "#8ed081"][i % 3]} /><ellipse cx={x} cy={cy - r - 22} rx={2.5} ry={4} fill="#ffb420" /><circle cx={x} cy={cy - r - 24} r={1.5} fill="#fff3c0" /></g>; })}
+    <defs>
+      <radialGradient id={`cf${k}`} cx="40%" cy="32%" r="72%"><stop offset="0" stopColor={lighten(frost, 0.4)} /><stop offset="1" stopColor={frost} /></radialGradient>
+      <radialGradient id={`cs${k}`} cx="42%" cy="34%" r="72%"><stop offset="0" stopColor={lighten(sponge, 0.25)} /><stop offset="1" stopColor={sponge} /></radialGradient>
+    </defs>
+    {/* plate + shadow */}
+    <ellipse cx={cx} cy={cy + r * 0.72} rx={r + 20} ry={(r + 20) * 0.26} fill="#3a2a2a" opacity={0.1} />
+    <ellipse cx={cx} cy={cy + r * 0.6} rx={r + 18} ry={(r + 18) * 0.3} fill={plate} stroke="#e2d8c9" strokeWidth={2} />
+    {/* frosting body + top */}
+    <circle cx={cx} cy={cy} r={r + 7} fill={`url(#cf${k})`} />
+    {parts > 1 ? slices : <circle cx={cx} cy={cy} r={r} fill={`url(#cs${k})`} />}
+    {/* piped frosting dollops around the rim */}
+    {Array.from({ length: 12 }).map((_, i) => { const a = (i / 12) * 2 * Math.PI; return <circle key={i} cx={cx + (r + 3.5) * Math.cos(a)} cy={cy + (r + 3.5) * Math.sin(a)} r={5} fill={frost} stroke={frostD} strokeWidth={1} />; })}
+    {/* centre rosette (whole cake) */}
+    {parts <= 1 && <g><circle cx={cx} cy={cy} r={r * 0.32} fill={frost} stroke={frostD} strokeWidth={1.5} /><path d={`M${cx} ${cy} m${-r * 0.2} 0 a${r * 0.2} ${r * 0.2} 0 1 1 ${r * 0.4} 0`} fill="none" stroke={frostD} strokeWidth={1.5} opacity={0.7} />{cherry(cx, cy, 1.2)}{[0, 1, 2, 3, 4].map((i) => { const a = (i / 5) * 2 * Math.PI - Math.PI / 2; return cherry(cx + r * 0.62 * Math.cos(a), cy + r * 0.62 * Math.sin(a)); })}</g>}
+    {Array.from({ length: candles }).map((_, i) => { const x = cx - (candles - 1) * 9 + i * 18; return <g key={i}><rect x={x - 2} y={cy - r - 19} width={4} height={17} rx={1.5} fill={["#5aa9ff", "#ffcf3f", "#8ed081"][i % 3]} /><path d={`M${x - 3} ${cy - r - 15} q3 -2 6 0`} stroke="#fff" strokeWidth={1.2} fill="none" opacity={0.7} /><ellipse cx={x} cy={cy - r - 23} rx={2.6} ry={4.2} fill="#ffb420" /><circle cx={x} cy={cy - r - 25} r={1.6} fill="#fff3c0" /></g>; })}
   </g>;
 }
