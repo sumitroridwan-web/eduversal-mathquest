@@ -12,7 +12,13 @@ export type Level = "EY" | "KG" | "G1" | "G2" | "G3" | "G4" | "G5" | "G6";
 
 export interface CheckOption { emoji?: string; num?: string; text?: string; svg?: React.ReactNode }
 export interface CheckItem { prompt: string; narration?: string; options: CheckOption[]; answer: number }
-export interface StoryPage { text: string; narration?: string; scene: React.ReactNode }
+export interface StoryPage {
+  text: string;
+  narration?: string;
+  scene: React.ReactNode;
+  /** Optional painted image; overrides the derived imageBase path. */
+  image?: string;
+}
 
 export interface StoryBook {
   id: string;
@@ -28,6 +34,26 @@ export interface StoryBook {
   /** "clean" = Let's-Read-style minimal reader (centred image + text, slider). */
   readerStyle?: "classic" | "clean";
   author?: string;
+  /** Folder of painted images, e.g. "/books/res-book-x". When set, the
+   * reader shows cover.webp / p1.webp… falling back to the SVG scene if a
+   * file is missing. Drop real painted art in to replace the SVG. */
+  imageBase?: string;
+  /** Painted image extension in imageBase (default "webp"). */
+  imageExt?: string;
+  /** Optional explicit cover image; overrides the derived imageBase path. */
+  coverImage?: string;
+}
+
+/** Derived painted-image path for a story page (1-indexed), or undefined. */
+export function pageImageSrc(book: StoryBook, index0: number): string | undefined {
+  const p = book.pages[index0];
+  if (p?.image) return p.image;
+  return book.imageBase ? `${book.imageBase}/p${index0 + 1}.${book.imageExt ?? "webp"}` : undefined;
+}
+/** Derived painted cover image, or undefined. */
+export function coverImageSrc(book: StoryBook): string | undefined {
+  if (book.coverImage) return book.coverImage;
+  return book.imageBase ? `${book.imageBase}/cover.${book.imageExt ?? "webp"}` : undefined;
 }
 
 const num = (n: number): CheckOption => ({ num: String(n) });

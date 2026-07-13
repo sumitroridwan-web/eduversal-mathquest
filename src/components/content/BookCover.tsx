@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import type { Resource } from "@/types";
-import { getStorybook, type StoryBook, type Level } from "@/data/storybooks";
+import { getStorybook, coverImageSrc, type StoryBook, type Level } from "@/data/storybooks";
 import { FONT, Star } from "./storyKit";
+import { Illustration } from "./Illustration";
 
 // ==========================================================
 // BookCover — a real children's-book front cover: focal cartoon
@@ -32,7 +33,7 @@ export function CleanCover({ book, className }: { book: StoryBook; className?: s
   return (
     <div className={cn("relative flex flex-col overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-black/5", className)}>
       <div className="relative flex-1" style={{ backgroundImage: `linear-gradient(160deg, ${book.coverFrom}, ${book.coverTo})` }}>
-        <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>{book.cover}</svg>
+        <div className="absolute inset-0"><Illustration image={coverImageSrc(book)} scene={book.cover} fit="slice" /></div>
         {book.audio && <div className="absolute right-2 top-2 rounded-full bg-white/90 px-1.5 py-0.5 text-xs shadow">🔊</div>}
       </div>
       <div className="shrink-0 px-3 py-3 text-center" style={{ borderTop: `3px solid ${book.accent}` }}>

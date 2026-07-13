@@ -5,7 +5,9 @@ import { ChevronLeft, ChevronRight, Home, Volume2, Pause, Play, RotateCcw, Check
 import { Button } from "@/components/ui/Button";
 import { cn, clamp } from "@/lib/utils";
 import type { StoryBook, CheckItem, CheckOption } from "@/data/storybooks";
+import { pageImageSrc } from "@/data/storybooks";
 import { StoryCover } from "./BookCover";
+import { Illustration } from "./Illustration";
 import { useAuth } from "@/stores/auth";
 import { progressFor, saveBookPage, recordResult } from "@/lib/repository";
 import { sfx } from "@/lib/sound";
@@ -218,8 +220,8 @@ function Leaf({ book, leaf, idx, storyIndex, word, clean, onFinish, onRestart, o
       const page = book.pages[storyIndex];
       const sentences = page.text.split(/(?<=[.!?])\s+/);
       return <div className={cn(face, "flex min-h-[440px] flex-col items-center justify-center bg-white px-8 py-8 sm:px-14")}>
-        <div className="w-full max-w-md overflow-hidden rounded-2xl" style={{ backgroundImage: `linear-gradient(to bottom, ${book.coverFrom}, #ffffff)` }}>
-          <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" className="h-full w-full">{page.scene}</svg>
+        <div className="aspect-[16/11] w-full max-w-md overflow-hidden rounded-2xl" style={{ backgroundImage: `linear-gradient(to bottom, ${book.coverFrom}, #ffffff)` }}>
+          <Illustration image={pageImageSrc(book, storyIndex)} scene={page.scene} fit="meet" />
         </div>
         <div className="mt-7 max-w-lg text-center" role="group" aria-roledescription="story page" aria-live="polite">
           {sentences.map((s, i) => (
@@ -262,7 +264,7 @@ function Leaf({ book, leaf, idx, storyIndex, word, clean, onFinish, onRestart, o
     let wc = -1;
     return <div className={cn(face, "flex flex-col bg-white")}>
       <div className="relative aspect-[16/10] w-full shrink-0 bg-gradient-to-b from-sky-50 to-white">
-        <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full">{page.scene}</svg>
+        <div className="absolute inset-0"><Illustration image={pageImageSrc(book, storyIndex)} scene={page.scene} fit="meet" /></div>
       </div>
       <div className="flex flex-1 flex-col justify-center border-t border-navy-100 bg-white px-5 py-4 sm:px-7 sm:py-5" role="group" aria-roledescription="story page" aria-live="polite">
         <p className="font-display text-lg font-semibold leading-relaxed text-navy-800 sm:text-xl">

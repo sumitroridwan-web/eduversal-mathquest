@@ -32,6 +32,7 @@ export const sampleBook: StoryBook = {
   subtitle: "Sharing fairly into equal parts",
   author: "Eduversal MathQuest",
   level: "G1", audio: true, readerStyle: "clean",
+  imageBase: "/books/res-book-cake-to-share", imageExt: "jpg", // drop painted art here to replace the SVG
   accent: "#e07aa0", coverFrom: "#ffe6d8", coverTo: "#ffd0c6", titleColor: "#a11a52",
   characters: [{ name: "Mia", role: "who has just moved in" }, { name: "Tomo & Tara", role: "the kind neighbours" }],
   cover: <R.Painterly seed={1}>
