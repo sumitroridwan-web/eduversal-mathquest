@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { PaperFX } from "./storyKit";
 
 // Renders a painted image when available, otherwise the SVG scene.
 // If the image 404s or errors, it falls back to the SVG automatically —
@@ -21,5 +22,5 @@ export function Illustration({ image, scene, fit = "meet", className }: {
     return <img src={image} alt="" loading="lazy" onError={() => setFailed(true)}
       className={cn("h-full w-full", fit === "slice" ? "object-cover" : "object-contain", className)} />;
   }
-  return <svg viewBox="0 0 320 220" preserveAspectRatio={fit === "slice" ? "xMidYMid slice" : "xMidYMid meet"} className={cn("h-full w-full", className)}>{scene}</svg>;
+  return <svg viewBox="0 0 320 220" preserveAspectRatio={fit === "slice" ? "xMidYMid slice" : "xMidYMid meet"} className={cn("h-full w-full", className)}>{scene}<PaperFX /></svg>;
 }

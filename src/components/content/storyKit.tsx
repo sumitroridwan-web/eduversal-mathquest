@@ -12,6 +12,33 @@ export type Expr = "happy" | "excited" | "think" | "surprised" | "sleepy" | "pro
 
 const INK = "#2a2440";
 
+// colour shading helpers (for soft light/shadow without gradient ids)
+function shade(hex: string, amt: number): string {
+  const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const t = amt < 0 ? 0 : 255, p = Math.abs(amt);
+  r = Math.round(r + (t - r) * p); g = Math.round(g + (t - g) * p); b = Math.round(b + (t - b) * p);
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+const darken = (h: string, a = 0.2) => shade(h, -a);
+
+// Painterly paper overlay (grain + warm top-light + soft vignette). Text-safe
+// — no displacement — so it can be laid over any scene. Draw it LAST.
+export function PaperFX({ w = 320, h = 220 }: { w?: number; h?: number }) {
+  return <g aria-hidden>
+    <defs>
+      <filter id="pfx-grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} seed={7} result="n" />
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0.3 0" />
+      </filter>
+      <radialGradient id="pfx-hl" cx="50%" cy="14%" r="62%"><stop offset="0%" stopColor="#fff6e6" stopOpacity="0.32" /><stop offset="100%" stopColor="#fff6e6" stopOpacity="0" /></radialGradient>
+      <radialGradient id="pfx-vig" cx="50%" cy="42%" r="80%"><stop offset="56%" stopColor="#4a2f22" stopOpacity="0" /><stop offset="100%" stopColor="#4a2f22" stopOpacity="0.13" /></radialGradient>
+    </defs>
+    <rect x={0} y={0} width={w} height={h} fill="url(#pfx-hl)" style={{ mixBlendMode: "soft-light" }} />
+    <rect x={0} y={0} width={w} height={h} filter="url(#pfx-grain)" style={{ mixBlendMode: "multiply" }} opacity={0.32} />
+    <rect x={0} y={0} width={w} height={h} fill="url(#pfx-vig)" />
+  </g>;
+}
+
 // ---- expressive face (drawn around a local origin, head radius ~ r) ----
 export function Face({ r = 22, expr = "happy", look = 0 }: { r?: number; expr?: Expr; look?: number }) {
   const eyeY = -r * 0.1, eyeDx = r * 0.42, eyeR = r * 0.17;
@@ -58,17 +85,22 @@ export function Kid({ x = 0, y = 0, s = 1, skin = "#f2c19b", hair = "#3a2a1e", s
 }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>
+      {/* ground shadow */}
+      <ellipse cx={0} cy={57} rx={19} ry={4} fill={INK} opacity={0.12} />
       {/* legs */}
       <rect x={-11} y={34} width={9} height={20} rx={4} fill="#3a4e75" /><rect x={2} y={34} width={9} height={20} rx={4} fill="#3a4e75" />
       <ellipse cx={-6} cy={56} rx={7} ry={4} fill={INK} /><ellipse cx={7} cy={56} rx={7} ry={4} fill={INK} />
-      {/* body */}
+      {/* body + soft shading */}
       <path d="M-16 20 Q-18 40 -13 40 L13 40 Q18 40 16 20 Q14 8 0 8 Q-14 8 -16 20 Z" fill={shirt} />
+      <path d="M-14 32 Q0 42 14 32 L13 40 Q0 44 -13 40 Z" fill={darken(shirt, 0.18)} opacity={0.55} />
+      <ellipse cx={-7} cy={16} rx={4.5} ry={8} fill="#ffffff" opacity={0.16} />
       {/* arms */}
       {arm === "up" || arm === "wave"
         ? <g><rect x={-20} y={8} width={8} height={20} rx={4} fill={shirt} transform="rotate(35 -16 12)" /><rect x={12} y={-6} width={8} height={20} rx={4} fill={shirt} transform="rotate(20 16 6)" /><circle cx={19} cy={-8} r={4.5} fill={skin} /></g>
         : <g><rect x={-20} y={14} width={8} height={20} rx={4} fill={shirt} /><rect x={12} y={14} width={8} height={20} rx={4} fill={shirt} /><circle cx={-16} cy={34} r={4.5} fill={skin} /><circle cx={16} cy={34} r={4.5} fill={skin} /></g>}
-      {/* head */}
+      {/* head + highlight */}
       <circle cx={0} cy={-12} r={20} fill={skin} />
+      <ellipse cx={-7} cy={-18} rx={6.5} ry={8.5} fill="#ffffff" opacity={0.14} />
       {/* hair */}
       {hairStyle === "short" && <path d="M-20 -14 Q-22 -34 0 -34 Q22 -34 20 -14 Q14 -26 0 -26 Q-14 -26 -20 -14 Z" fill={hair} />}
       {hairStyle === "curly" && <g fill={hair}><circle cx={-14} cy={-26} r={9} /><circle cx={0} cy={-31} r={10} /><circle cx={14} cy={-26} r={9} /><circle cx={-20} cy={-16} r={7} /><circle cx={20} cy={-16} r={7} /></g>}
@@ -85,6 +117,7 @@ export function Snail({ x = 0, y = 0, s = 1, shell = "#ffb420", expr = "happy" }
   return <g transform={`translate(${x} ${y}) scale(${s})`}>
     <path d="M-30 8 Q-34 18 -18 18 L26 18 Q34 18 30 10 Q26 4 16 6 Z" fill="#a7e0c8" />
     <circle cx={-2} cy={2} r={17} fill={shell} stroke="#e0930f" strokeWidth={2.5} />
+    <ellipse cx={-8} cy={-5} rx={5} ry={4} fill="#ffffff" opacity={0.25} />
     <circle cx={-2} cy={2} r={11} fill="none" stroke="#e0930f" strokeWidth={2.5} />
     <circle cx={-2} cy={2} r={5} fill="none" stroke="#e0930f" strokeWidth={2.5} />
     <path d="M22 12 Q30 12 30 2 Q38 -2 34 6" fill="#a7e0c8" />
@@ -97,6 +130,7 @@ export function Bee({ x = 0, y = 0, s = 1, expr = "happy" }: { x?: number; y?: n
   return <g transform={`translate(${x} ${y}) scale(${s})`}>
     <ellipse cx={-2} cy={-12} rx={11} ry={9} fill="#e8f1ff" opacity={0.85} stroke="#cfe0f5" /><ellipse cx={10} cy={-12} rx={11} ry={9} fill="#e8f1ff" opacity={0.85} stroke="#cfe0f5" />
     <ellipse cx={4} cy={4} rx={18} ry={14} fill="#ffb420" />
+    <ellipse cx={-3} cy={-2} rx={6} ry={4.5} fill="#ffffff" opacity={0.22} />
     <path d="M-6 -4 q6 8 22 3" stroke="#2a2440" strokeWidth={4} fill="none" /><path d="M-9 6 q9 8 27 2" stroke="#2a2440" strokeWidth={4} fill="none" />
     <g transform="translate(4 2)"><Face r={11} expr={expr} /></g>
     <line x1={-4} y1={-14} x2={-8} y2={-22} stroke={INK} strokeWidth={1.5} /><circle cx={-8} cy={-23} r={2} fill={INK} />
@@ -105,18 +139,23 @@ export function Bee({ x = 0, y = 0, s = 1, expr = "happy" }: { x?: number; y?: n
 }
 export function Duck({ x = 0, y = 0, s = 1, body = "#ffd84d", expr = "happy" }: { x?: number; y?: number; s?: number; body?: string; expr?: Expr }) {
   return <g transform={`translate(${x} ${y}) scale(${s})`}>
+    <ellipse cx={2} cy={30} rx={19} ry={3.5} fill={INK} opacity={0.1} />
     <ellipse cx={2} cy={16} rx={20} ry={14} fill={body} />
-    <path d="M14 20 q14 -2 18 6 q-10 4 -18 -2 Z" fill={body} />
+    <ellipse cx={-3} cy={10} rx={8} ry={5} fill="#ffffff" opacity={0.2} />
+    <path d="M14 20 q14 -2 18 6 q-10 4 -18 -2 Z" fill={darken(body, 0.1)} />
     <circle cx={-12} cy={-2} r={14} fill={body} />
+    <ellipse cx={-16} cy={-7} rx={4.5} ry={3.5} fill="#ffffff" opacity={0.22} />
     <path d="M-26 -2 q-8 0 -8 4 q0 4 8 3 Z" fill="#f59e0b" />
     <g transform="translate(-12 -2)"><Face r={11} expr={expr} /></g>
   </g>;
 }
 export function Cat({ x = 0, y = 0, s = 1, body = "#b39ddb", expr = "happy" }: { x?: number; y?: number; s?: number; body?: string; expr?: Expr }) {
   return <g transform={`translate(${x} ${y}) scale(${s})`}>
+    <ellipse cx={0} cy={33} rx={16} ry={3.5} fill={INK} opacity={0.1} />
     <ellipse cx={0} cy={20} rx={16} ry={14} fill={body} />
-    <path d="M14 22 q16 4 10 -8 q-2 8 -10 3 Z" fill={body} />
+    <path d="M14 22 q16 4 10 -8 q-2 8 -10 3 Z" fill={darken(body, 0.12)} />
     <circle cx={0} cy={-4} r={18} fill={body} />
+    <ellipse cx={-6} cy={-10} rx={5.5} ry={7} fill="#ffffff" opacity={0.16} />
     <path d="M-16 -16 l-4 -14 l14 8 Z" fill={body} /><path d="M16 -16 l4 -14 l-14 8 Z" fill={body} />
     <path d="M-16 -16 l-2 -8 l7 5 Z" fill="#ff9aa8" /><path d="M16 -16 l2 -8 l-7 5 Z" fill="#ff9aa8" />
     <g transform="translate(0 -4)"><Face r={15} expr={expr} /></g>
@@ -124,8 +163,10 @@ export function Cat({ x = 0, y = 0, s = 1, body = "#b39ddb", expr = "happy" }: {
 }
 export function Bird({ x = 0, y = 0, s = 1, body = "#4fc3f7", expr = "happy" }: { x?: number; y?: number; s?: number; body?: string; expr?: Expr }) {
   return <g transform={`translate(${x} ${y}) scale(${s})`}>
+    <ellipse cx={0} cy={27} rx={13} ry={3.2} fill={INK} opacity={0.1} />
     <ellipse cx={0} cy={8} rx={15} ry={17} fill={body} />
     <ellipse cx={-14} cy={8} rx={7} ry={11} fill="#fff" opacity={0.5} />
+    <ellipse cx={-5} cy={-2} rx={5} ry={7} fill="#ffffff" opacity={0.18} />
     <path d="M12 4 l12 -3 l-10 8 Z" fill="#f59e0b" />
     <g transform="translate(0 -6)"><Face r={12} expr={expr} /></g>
     <path d="M-2 24 l-4 8 M4 24 l4 8" stroke="#f59e0b" strokeWidth={2.5} strokeLinecap="round" />
@@ -133,9 +174,11 @@ export function Bird({ x = 0, y = 0, s = 1, body = "#4fc3f7", expr = "happy" }: 
 }
 export function Robot({ x = 0, y = 0, s = 1, body = "#7fd1c9", expr = "happy" }: { x?: number; y?: number; s?: number; body?: string; expr?: Expr }) {
   return <g transform={`translate(${x} ${y}) scale(${s})`}>
+    <ellipse cx={0} cy={40} rx={18} ry={3.5} fill={INK} opacity={0.1} />
     <rect x={-14} y={12} width={28} height={26} rx={7} fill={body} stroke="#3aa79c" strokeWidth={2} />
     <circle cx={0} cy={24} r={5} fill="#ffb420" />
     <rect x={-16} y={-20} width={32} height={30} rx={10} fill={body} stroke="#3aa79c" strokeWidth={2} />
+    <rect x={-12} y={-17} width={9} height={24} rx={4} fill="#ffffff" opacity={0.14} />
     <line x1={0} y1={-20} x2={0} y2={-30} stroke="#3aa79c" strokeWidth={2} /><circle cx={0} cy={-32} r={4} fill="#ffb420" />
     <g transform="translate(0 -6)"><Face r={13} expr={expr} /></g>
     <rect x={-22} y={16} width={8} height={16} rx={4} fill={body} /><rect x={14} y={16} width={8} height={16} rx={4} fill={body} />

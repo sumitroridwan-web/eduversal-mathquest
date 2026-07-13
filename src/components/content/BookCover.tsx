@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { Resource } from "@/types";
 import { getStorybook, coverImageSrc, type StoryBook, type Level } from "@/data/storybooks";
-import { FONT, Star } from "./storyKit";
+import { FONT, Star, PaperFX } from "./storyKit";
 import { Illustration } from "./Illustration";
 
 // ==========================================================
@@ -56,6 +56,7 @@ export function StoryCover({ book, mode = "thumb", className }: { book: StoryBoo
       <svg viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>
         {/* illustration */}
         {book.cover}
+        <PaperFX />
         {/* soft top scrim so the title reads over any scene */}
         <defs>
           <linearGradient id={`scrim-${book.id}`} x1="0" y1="0" x2="0" y2="1">
