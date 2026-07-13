@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { ResourceCover } from "./ResourceCover";
 import { ResourceCard } from "./ResourceCard";
-import { ActivityPlayer } from "./ActivityPlayer";
+import { ActivityPlayer, ActivityFullscreen } from "./ActivityPlayer";
 import { AssignModal } from "./AssignModal";
 import { getResources } from "@/data/resources";
 import { programmeLabel, stageLabel, typeLabel, difficultyTone } from "@/lib/content";
@@ -32,6 +32,7 @@ export function ResourceDetail({
   const notify = useToasts((s) => s.notify);
   const [tab, setTab] = useState("play");
   const [assignOpen, setAssignOpen] = useState(false);
+  const [playOpen, setPlayOpen] = useState(false);
   const fav = has(resource.id);
   const related = getResources(resource.relatedIds);
   const canAssign = role === "teacher" || role === "admin";
@@ -77,7 +78,7 @@ export function ResourceDetail({
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <Button onClick={() => setTab("play")}>
+              <Button onClick={() => setPlayOpen(true)}>
                 <Sparkles className="h-4 w-4" /> {resource.type === "book" ? "Start reading" : "Start activity"}
               </Button>
               {canAssign && (
@@ -195,6 +196,7 @@ export function ResourceDetail({
       )}
 
       <AssignModal resource={assignOpen ? resource : null} open={assignOpen} onClose={() => setAssignOpen(false)} />
+      <ActivityFullscreen resource={resource} open={playOpen} onClose={() => setPlayOpen(false)} />
     </div>
   );
 }

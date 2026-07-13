@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { Check, X, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
 import type { Resource } from "@/types";
@@ -57,14 +58,72 @@ function ActivityBody({ resource }: { resource: Resource }) {
         </PresentStage>
       );
     }
-    return <BookReader resource={resource} />;
+    return (
+      <PresentStage title={resource.title} buttonLabel="Read full screen" defaultZoom={1.15} stageWidth={760}>
+        <BookReaderRaw resource={resource} />
+      </PresentStage>
+    );
   }
   if (resource.type === "simulation") return <SimulationEngine resource={resource} />;
   return <GameEngine resource={resource} />;
 }
 
-// ---------- Book: reader with checkpoints ----------
-function BookReader({ resource }: { resource: Resource }) {
+// Raw activity content (the correct engine for the type) with no presentation
+// chrome — reused by the inline player and the full-screen overlay.
+function ActivityStage({ resource }: { resource: Resource }) {
+  if (resource.type === "book") {
+    const storybook = getStorybook(resource.id);
+    if (storybook) return <StoryBookReader book={storybook} />;
+    return <BookReaderRaw resource={resource} />;
+  }
+  if (resource.type === "simulation") return <SimulationEngine resource={resource} />;
+  return <GameEngine resource={resource} />;
+}
+
+/**
+ * Full-screen overlay launched by the "Start reading / Start activity" button.
+ * Renders the actual book / game / simulation engine filling the viewport, with
+ * a top bar to close it (Esc also closes). A portalled fixed overlay so it
+ * reliably covers everything, independent of the native Fullscreen API.
+ */
+export function ActivityFullscreen({ resource, open, onClose }: { resource: Resource; open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (!open) return;
+    track("activity_open", { resourceId: resource.id, type: resource.type });
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [open, resource.id, resource.type, onClose]);
+
+  if (!mounted || !open) return null;
+  const label = resource.type === "book" ? "Reading" : resource.type === "simulation" ? "Exploring" : "Playing";
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex flex-col bg-surface-soft">
+      <header className="flex items-center justify-between gap-3 border-b border-navy-100 bg-white px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <Badge tone="teal">{label}</Badge>
+          <p className="truncate font-display font-semibold text-navy-900">{resource.title}</p>
+        </div>
+        <Button variant="primary" size="sm" onClick={onClose}><X className="h-4 w-4" /> Close</Button>
+      </header>
+      <div className="flex flex-1 justify-center overflow-auto p-4 sm:p-6">
+        <div className="w-full max-w-5xl">
+          <ActivityErrorBoundary resourceId={resource.id} title={resource.title}>
+            <ActivityStage resource={resource} />
+          </ActivityErrorBoundary>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ---------- Book: reader with checkpoints (fallback when no StoryBook data) ----------
+function BookReaderRaw({ resource }: { resource: Resource }) {
   const notify = useToasts((s) => s.notify);
   const chapters = resource.chapters ?? [];
   const [page, setPage] = useState(0);
@@ -91,7 +150,6 @@ function BookReader({ resource }: { resource: Resource }) {
   };
 
   return (
-    <PresentStage title={resource.title} buttonLabel="Read full screen" defaultZoom={1.15} stageWidth={760}>
     <div className="rounded-2xl border border-navy-100 bg-white shadow-card">
       <div className="flex items-center justify-between border-b border-navy-100 p-4">
         <div className="flex items-center gap-2">
@@ -154,6 +212,5 @@ function BookReader({ resource }: { resource: Resource }) {
         </Button>
       </div>
     </div>
-    </PresentStage>
   );
 }
